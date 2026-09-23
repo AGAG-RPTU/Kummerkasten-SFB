@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Conversation · Kummerkasten</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/page-conversation.js"></script>
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="index.html" data-i18n="site.title"></a>
+  <nav>
+    <a href="index.html" data-i18n="nav.home"></a>
+    <a href="write.html" data-i18n="nav.write"></a>
+    <a href="conversation.html" data-i18n="nav.open" aria-current="page"></a>
+    <button id="lang-toggle" class="link" type="button" data-i18n="lang.other"></button>
+  </nav>
+</div></header>
+<main>
+<h1 data-i18n="conv.title"></h1>
+
+<form id="unlock" class="card" autocomplete="off">
+  <label for="codeword" data-i18n="conv.codeword"></label>
+  <input id="codeword" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+  <p class="hint" data-i18n="conv.hint"></p>
+  <div id="feedback" class="feedback" aria-live="polite"></div>
+  <div class="actions"><button type="submit" data-i18n="conv.open"></button></div>
+  <p id="unlock-status" class="status" hidden></p>
+</form>
+
+<section id="conversation" hidden>
+  <div id="thread" class="thread"></div>
+  <p id="thread-note" class="note" hidden></p>
+  <form id="reply" class="card">
+    <label for="reply-body" data-i18n="conv.reply"></label>
+    <textarea id="reply-body" maxlength="20000" required></textarea>
+    <div class="actions">
+      <button type="submit" data-i18n="conv.send"></button>
+      <button id="lock" type="button" class="secondary" data-i18n="conv.lock"></button>
+      <button id="delete" type="button" class="danger" data-i18n="conv.delete"></button>
+    </div>
+    <p id="reply-status" class="status" hidden></p>
+  </form>
+</section>
+</main>
+<footer class="site">
+  <a id="source-link" data-i18n="footer.source"></a>
+  <span id="version"></span>
+  <a href="staff.html" data-i18n="footer.staff"></a>
+</footer>
+</body>
+</html>

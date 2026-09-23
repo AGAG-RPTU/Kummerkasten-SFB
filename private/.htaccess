@@ -1,0 +1,2 @@
+# Only relevant if this directory sits inside the webroot.
+Require all denied

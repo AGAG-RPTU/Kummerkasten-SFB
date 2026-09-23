@@ -1,0 +1,26 @@
+# Apache configuration for shared webspace. tools/dev-router.php reads the
+# "Header always set" lines below, so local testing uses the same headers.
+
+Options -Indexes
+AddDefaultCharset utf-8
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    # 'wasm-unsafe-eval' lets libsodium compile its WebAssembly; nothing else
+    # is loaded from anywhere but this site.
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
+    Header always set Referrer-Policy "no-referrer"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+    Header always set Strict-Transport-Security "max-age=31536000"
+</IfModule>
+
+# In case private/ ends up inside the webroot
+<FilesMatch "^(config\.php|app\.php|schema\.sql|.*\.sqlite)$">
+    Require all denied
+</FilesMatch>

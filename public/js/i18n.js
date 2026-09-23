@@ -1,0 +1,284 @@
+// UI strings in English and German. Elements carry data-i18n="key" (text) or
+// data-i18n-html="key" (trusted markup from this file only); inputs may carry
+// data-i18n-placeholder="key".
+
+const STRINGS = {
+  en: {
+    'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.tagline': 'A confidential line to the trusted persons of the SFB',
+    'nav.home': 'About',
+    'nav.write': 'Write',
+    'nav.open': 'My conversation',
+    'lang.other': 'Deutsch',
+    'footer.source': 'Source code',
+    'footer.staff': 'For trusted persons',
+
+    'index.intro': '<p>Did something happen within the SFB that weighs on you: discrimination, harassment, a conflict, a problem you cannot solve alone? Or do you have a suggestion? Write to the trusted persons here, anonymously or with your name.</p>',
+    'index.write': 'Write a message',
+    'index.open': 'Continue a conversation',
+    'index.how.title': 'How it works',
+    'index.how.body': '<ol><li>You need the shared password. It is announced at SFB meetings and on the internal mailing lists. It only keeps out spam; it does not identify you.</li><li>Write your message. Name and contact details are optional.</li><li>After sending you get a <strong>codeword</strong> of six words. With it you can come back, read replies and answer. Keep it safe: nobody can recover it, not even the trusted persons.</li></ol>',
+    'index.people.title': 'Who reads your message',
+    'index.people.body': 'Only these persons can decrypt messages. Each has a key; its fingerprint is shown so that it can be compared with the published source code.',
+    'index.security.title': 'Privacy and security',
+    'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>Times are stored rounded to the hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is open source, such a change can be detected by comparing the delivered files with the published ones.</li></ul>',
+    'index.fingerprint': 'Key fingerprint',
+
+    'write.title': 'Write a message',
+    'write.password': 'Shared password',
+    'write.category': 'Category',
+    'cat.problem': 'Report a problem',
+    'cat.feedback': 'Suggestion or feedback',
+    'cat.question': 'Question',
+    'cat.other': 'Other',
+    'write.subject': 'Subject',
+    'write.body': 'Your message',
+    'write.optional': 'Optional: who you are',
+    'write.optionalHint': 'Leave these empty to stay anonymous. They are encrypted like the message.',
+    'write.name': 'Name',
+    'write.contact': 'How to reach you (e.g. email)',
+    'write.send': 'Encrypt and send',
+    'done.title': 'Sent. This is your codeword:',
+    'done.warn': 'Write it down or save it now. It is the only way to read replies, and it cannot be recovered.',
+    'done.copy': 'Copy',
+    'done.copied': 'Copied',
+    'done.download': 'Save as text file',
+    'done.confirm': 'I have saved my codeword.',
+    'done.next': 'Go to the conversation',
+    'done.file': 'SFB TRR 195 Kummerkasten\n\nCodeword: {codeword}\n\nRead replies at {url}\n',
+    'done.leave': 'You have not confirmed that you saved your codeword.',
+
+    'conv.title': 'Your conversation',
+    'conv.codeword': 'Codeword',
+    'conv.hint': 'Six words, separated by spaces or dashes. The first three letters of each word are enough.',
+    'conv.open': 'Open',
+    'conv.recognised': 'Recognised {n} of {total} words: {words}',
+    'conv.unknown': 'Unknown: {words}',
+    'conv.you': 'You',
+    'conv.noReply': 'No reply yet. The trusted persons usually answer within a few days; please check back later.',
+    'conv.closed': 'The trusted persons marked this conversation as resolved. It will be deleted after some time unless you write again.',
+    'conv.reply': 'Your reply',
+    'conv.send': 'Send',
+    'conv.delete': 'Delete conversation',
+    'conv.deleteConfirm': 'Delete this conversation for everyone? This cannot be undone.',
+    'conv.deleted': 'The conversation was deleted.',
+    'conv.lock': 'Close',
+
+    'staff.title': 'Trusted persons',
+    'staff.who': 'Who are you?',
+    'staff.passphrase': 'Passphrase',
+    'staff.unlock': 'Unlock',
+    'staff.refresh': 'Refresh',
+    'staff.none': 'No conversations.',
+    'staff.awaiting': 'awaiting reply',
+    'staff.open': 'open',
+    'staff.closed': 'resolved',
+    'staff.close': 'Mark as resolved',
+    'staff.requester': 'Requester',
+    'staff.category': 'Category',
+    'staff.name': 'Name',
+    'staff.contact': 'Contact',
+    'staff.noSubject': '(no subject)',
+    'staff.lock': 'Lock',
+
+    'setup.title': 'Create a key for a trusted person',
+    'setup.intro': 'Do this once, on your own device. The passphrase never leaves this browser. Afterwards send the printed entry to whoever maintains the site.',
+    'setup.id': 'Short id (lowercase letters, e.g. hannah)',
+    'setup.name': 'Display name',
+    'setup.generate': 'Generate passphrase',
+    'setup.passphrase': 'Your passphrase. Store it in a password manager; it cannot be recovered.',
+    'setup.retype': 'Type the passphrase again',
+    'setup.create': 'Create key',
+    'setup.result': 'Entry for keys.json:',
+    'setup.fingerprint': 'Fingerprint',
+
+    'status.encrypting': 'Encrypting…',
+    'status.deriving': 'Computing keys, this takes a moment…',
+    'status.sending': 'Sending…',
+    'status.loading': 'Loading…',
+
+    'err.password': 'Wrong password.',
+    'err.rate': 'Too many attempts. Please try again in an hour.',
+    'err.generic': 'Something went wrong: {msg}',
+    'err.notConfigured': 'The Kummerkasten is not set up yet: no trusted persons are configured.',
+    'err.empty': 'Please write a message.',
+    'err.codeword': 'A codeword has six words.',
+    'err.notFound': 'No conversation for this codeword. Please check the words.',
+    'err.passphrase': 'This passphrase does not belong to {name}.',
+    'err.retype': 'The passphrases do not match.',
+    'err.id': 'The id must start with a lowercase letter and contain only a–z, 0–9 and _.',
+    'err.conflict': 'Someone wrote in the meantime. The conversation was reloaded; please send again.',
+    'err.decrypt': '[This message could not be decrypted.]',
+  },
+
+  de: {
+    'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.tagline': 'Ein vertraulicher Draht zu den Vertrauenspersonen des SFB',
+    'nav.home': 'Info',
+    'nav.write': 'Schreiben',
+    'nav.open': 'Meine Unterhaltung',
+    'lang.other': 'English',
+    'footer.source': 'Quellcode',
+    'footer.staff': 'Für Vertrauenspersonen',
+
+    'index.intro': '<p>Ist im SFB etwas passiert, das dich belastet: Diskriminierung, Belästigung, ein Konflikt, ein Problem, das du nicht allein lösen kannst? Oder hast du einen Vorschlag? Schreib den Vertrauenspersonen hier, anonym oder mit Namen.</p>',
+    'index.write': 'Nachricht schreiben',
+    'index.open': 'Unterhaltung fortsetzen',
+    'index.how.title': 'So funktioniert es',
+    'index.how.body': '<ol><li>Du brauchst das gemeinsame Passwort. Es wird bei SFB-Treffen und auf den internen Mailinglisten bekanntgegeben. Es hält nur Spam fern und sagt nichts über dich.</li><li>Schreib deine Nachricht. Name und Kontaktdaten sind freiwillig.</li><li>Nach dem Absenden bekommst du ein <strong>Codewort</strong> aus sechs Wörtern. Damit kannst du wiederkommen, Antworten lesen und antworten. Bewahre es gut auf: Niemand kann es wiederherstellen, auch die Vertrauenspersonen nicht.</li></ol>',
+    'index.people.title': 'Wer deine Nachricht liest',
+    'index.people.body': 'Nur diese Personen können Nachrichten entschlüsseln. Jede hat einen Schlüssel; sein Fingerabdruck steht hier, damit man ihn mit dem veröffentlichten Quellcode vergleichen kann.',
+    'index.security.title': 'Datenschutz und Sicherheit',
+    'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Zeiten werden auf die Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der Code offen ist, lässt sich so eine Änderung durch Vergleich der ausgelieferten mit den veröffentlichten Dateien erkennen.</li></ul>',
+    'index.fingerprint': 'Fingerabdruck des Schlüssels',
+
+    'write.title': 'Nachricht schreiben',
+    'write.password': 'Gemeinsames Passwort',
+    'write.category': 'Kategorie',
+    'cat.problem': 'Problem melden',
+    'cat.feedback': 'Vorschlag oder Rückmeldung',
+    'cat.question': 'Frage',
+    'cat.other': 'Sonstiges',
+    'write.subject': 'Betreff',
+    'write.body': 'Deine Nachricht',
+    'write.optional': 'Freiwillig: wer du bist',
+    'write.optionalHint': 'Leer lassen, um anonym zu bleiben. Diese Angaben werden wie die Nachricht verschlüsselt.',
+    'write.name': 'Name',
+    'write.contact': 'Wie wir dich erreichen (z. B. E-Mail)',
+    'write.send': 'Verschlüsseln und senden',
+    'done.title': 'Gesendet. Das ist dein Codewort:',
+    'done.warn': 'Schreib es jetzt auf oder speichere es. Nur damit kannst du Antworten lesen, und es lässt sich nicht wiederherstellen.',
+    'done.copy': 'Kopieren',
+    'done.copied': 'Kopiert',
+    'done.download': 'Als Textdatei speichern',
+    'done.confirm': 'Ich habe mein Codewort gespeichert.',
+    'done.next': 'Zur Unterhaltung',
+    'done.file': 'SFB TRR 195 Kummerkasten\n\nCodewort: {codeword}\n\nAntworten lesen unter {url}\n',
+    'done.leave': 'Du hast noch nicht bestätigt, dass du dein Codewort gespeichert hast.',
+
+    'conv.title': 'Deine Unterhaltung',
+    'conv.codeword': 'Codewort',
+    'conv.hint': 'Sechs Wörter, getrennt durch Leerzeichen oder Bindestriche. Die ersten drei Buchstaben jedes Worts genügen.',
+    'conv.open': 'Öffnen',
+    'conv.recognised': '{n} von {total} Wörtern erkannt: {words}',
+    'conv.unknown': 'Unbekannt: {words}',
+    'conv.you': 'Du',
+    'conv.noReply': 'Noch keine Antwort. Die Vertrauenspersonen antworten meist innerhalb weniger Tage; schau später wieder vorbei.',
+    'conv.closed': 'Die Vertrauenspersonen haben diese Unterhaltung als erledigt markiert. Sie wird nach einiger Zeit gelöscht, wenn du nicht erneut schreibst.',
+    'conv.reply': 'Deine Antwort',
+    'conv.send': 'Senden',
+    'conv.delete': 'Unterhaltung löschen',
+    'conv.deleteConfirm': 'Diese Unterhaltung für alle löschen? Das lässt sich nicht rückgängig machen.',
+    'conv.deleted': 'Die Unterhaltung wurde gelöscht.',
+    'conv.lock': 'Schließen',
+
+    'staff.title': 'Vertrauenspersonen',
+    'staff.who': 'Wer bist du?',
+    'staff.passphrase': 'Passphrase',
+    'staff.unlock': 'Entsperren',
+    'staff.refresh': 'Aktualisieren',
+    'staff.none': 'Keine Unterhaltungen.',
+    'staff.awaiting': 'wartet auf Antwort',
+    'staff.open': 'offen',
+    'staff.closed': 'erledigt',
+    'staff.close': 'Als erledigt markieren',
+    'staff.requester': 'Anfragende Person',
+    'staff.category': 'Kategorie',
+    'staff.name': 'Name',
+    'staff.contact': 'Kontakt',
+    'staff.noSubject': '(kein Betreff)',
+    'staff.lock': 'Sperren',
+
+    'setup.title': 'Schlüssel für eine Vertrauensperson erzeugen',
+    'setup.intro': 'Einmalig auf dem eigenen Gerät durchführen. Die Passphrase verlässt diesen Browser nicht. Danach den angezeigten Eintrag an die Person schicken, die die Seite betreut.',
+    'setup.id': 'Kurzname (Kleinbuchstaben, z. B. hannah)',
+    'setup.name': 'Angezeigter Name',
+    'setup.generate': 'Passphrase erzeugen',
+    'setup.passphrase': 'Deine Passphrase. Speichere sie in einem Passwortmanager; sie lässt sich nicht wiederherstellen.',
+    'setup.retype': 'Passphrase noch einmal eingeben',
+    'setup.create': 'Schlüssel erzeugen',
+    'setup.result': 'Eintrag für keys.json:',
+    'setup.fingerprint': 'Fingerabdruck',
+
+    'status.encrypting': 'Verschlüssele…',
+    'status.deriving': 'Berechne Schlüssel, das dauert einen Moment…',
+    'status.sending': 'Sende…',
+    'status.loading': 'Lade…',
+
+    'err.password': 'Falsches Passwort.',
+    'err.rate': 'Zu viele Versuche. Bitte in einer Stunde erneut versuchen.',
+    'err.generic': 'Etwas ist schiefgegangen: {msg}',
+    'err.notConfigured': 'Der Kummerkasten ist noch nicht eingerichtet: Es sind keine Vertrauenspersonen hinterlegt.',
+    'err.empty': 'Bitte schreib eine Nachricht.',
+    'err.codeword': 'Ein Codewort hat sechs Wörter.',
+    'err.notFound': 'Zu diesem Codewort gibt es keine Unterhaltung. Bitte prüfe die Wörter.',
+    'err.passphrase': 'Diese Passphrase gehört nicht zu {name}.',
+    'err.retype': 'Die Passphrasen stimmen nicht überein.',
+    'err.id': 'Der Kurzname muss mit einem Kleinbuchstaben beginnen und darf nur a–z, 0–9 und _ enthalten.',
+    'err.conflict': 'Inzwischen hat jemand geschrieben. Die Unterhaltung wurde neu geladen; bitte erneut senden.',
+    'err.decrypt': '[Diese Nachricht konnte nicht entschlüsselt werden.]',
+  },
+};
+
+const LANG_KEY = 'kk-lang';
+let lang = initialLang();
+
+function initialLang() {
+  try {
+    const stored = localStorage.getItem(LANG_KEY);
+    if (stored in STRINGS) {
+      return stored;
+    }
+  } catch {
+    // storage unavailable (private mode); fall through
+  }
+  return navigator.language?.startsWith('de') ? 'de' : 'en';
+}
+
+export function currentLang() {
+  return lang;
+}
+
+export function t(key, vars = {}) {
+  const text = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? '');
+}
+
+export function formatTime(unixSeconds) {
+  return new Date(unixSeconds * 1000).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+const listeners = [];
+
+// Callback runs after every language switch, for content rendered from JS.
+export function onLanguageChange(fn) {
+  listeners.push(fn);
+}
+
+export function applyI18n(root = document) {
+  document.documentElement.lang = lang;
+  for (const el of root.querySelectorAll('[data-i18n]')) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  for (const el of root.querySelectorAll('[data-i18n-html]')) {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  }
+  for (const el of root.querySelectorAll('[data-i18n-placeholder]')) {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+}
+
+export function toggleLang() {
+  setLang(lang === 'en' ? 'de' : 'en');
+}
+
+function setLang(next) {
+  lang = next;
+  try {
+    localStorage.setItem(LANG_KEY, lang);
+  } catch {
+    // not remembered; fine
+  }
+  applyI18n();
+  listeners.forEach((fn) => fn());
+}

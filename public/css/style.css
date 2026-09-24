@@ -177,6 +177,9 @@ button.danger { background: transparent; color: var(--bad); border-color: var(--
 button.danger:hover { background: var(--bad-wash); }
 button:disabled { opacity: 0.5; cursor: default; }
 
+.session { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.session p { margin: 0 auto 0 0; }
+
 .actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.25rem; align-items: center; }
 
 .status { border-radius: 8px; padding: 0.6rem 0.8rem; margin: 1rem 0 0; }

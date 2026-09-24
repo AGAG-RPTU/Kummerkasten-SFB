@@ -29,6 +29,7 @@ $('unlock').addEventListener('submit', async (event) => {
     return;
   }
   me = { id: entry.id, name: entry.name, keys };
+  showWhoami();
   $('passphrase').value = '';
   refreshFeedback();
   status($('unlock-status'), '');
@@ -227,7 +228,12 @@ $('lock').addEventListener('click', () => {
   $('unlock').hidden = false;
 });
 
+function showWhoami() {
+  $('whoami').textContent = me ? t('staff.whoami', { name: me.name, id: me.id }) : '';
+}
+
 onLanguageChange(() => {
+  showWhoami();
   render();
   refreshFeedback();
 });

@@ -50,18 +50,36 @@ export function apiErrorText(err) {
   return t('err.generic', { msg: err.message });
 }
 
-// Live feedback under a codeword/passphrase field.
+// Feedback text for a codeword/passphrase field, or null when it is empty.
+// With reveal false only counts are given, never the words themselves.
+export function wordFeedback(value, expected, { reveal }) {
+  if (!value.trim()) {
+    return null;
+  }
+  const { words, unknown } = parseWords(value);
+  return {
+    ok: words.length === expected && !unknown.length,
+    recognised: reveal
+      ? t('conv.recognised', { n: words.length, total: expected, words: words.join(' ') })
+      : t('words.recognisedCount', { n: words.length, total: expected }),
+    unknown: !unknown.length ? null
+      : reveal ? t('conv.unknown', { words: unknown.join(', ') })
+        : t('words.unknownCount', { n: unknown.length }),
+  };
+}
+
+// Live feedback under a codeword/passphrase field. Password fields get
+// counts only, so the feedback never shows what the field hides.
 export function attachWordFeedback(input, output, expected) {
   const update = () => {
-    const { words, unknown } = parseWords(input.value);
+    const feedback = wordFeedback(input.value, expected, { reveal: input.type !== 'password' });
     output.replaceChildren();
-    if (!input.value.trim()) {
+    if (!feedback) {
       return;
     }
-    output.append(h('span', { class: words.length === expected ? 'ok' : '' },
-      t('conv.recognised', { n: words.length, total: expected, words: words.join(' ') })));
-    if (unknown.length) {
-      output.append(h('br'), h('span', { class: 'bad' }, t('conv.unknown', { words: unknown.join(', ') })));
+    output.append(h('span', { class: feedback.ok ? 'ok' : '' }, feedback.recognised));
+    if (feedback.unknown) {
+      output.append(h('br'), h('span', { class: 'bad' }, feedback.unknown));
     }
   };
   input.addEventListener('input', update);

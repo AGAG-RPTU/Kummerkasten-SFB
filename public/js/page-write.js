@@ -125,7 +125,7 @@ $('form').addEventListener('submit', async (event) => {
 
 function showCodeword() {
   $('form').hidden = true;
-  $('codeword').replaceChildren(...codeword.split(' ').map((w) => h('li', {}, w)));
+  $('codeword').textContent = codeword;
   $('done').hidden = false;
   $('done').scrollIntoView();
 }

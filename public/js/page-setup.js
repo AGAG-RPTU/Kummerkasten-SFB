@@ -25,6 +25,11 @@ $('copy').addEventListener('click', async () => {
   $('copy').textContent = t('done.copied');
 });
 
+$('copy-entry').addEventListener('click', async () => {
+  await navigator.clipboard.writeText($('entry').textContent);
+  $('copy-entry').textContent = t('done.copied');
+});
+
 // Entering it again proves the passphrase was saved before any key is published.
 $('form').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -50,6 +55,7 @@ $('form').addEventListener('submit', async (event) => {
   };
   status($('status'), '');
   $('entry').textContent = JSON.stringify(entry, null, 2);
+  $('copy-entry').textContent = t('setup.copyEntry');
   $('fingerprint').textContent = kk.fingerprint(entry.box);
   $('passphrase-box').hidden = true;
   $('passphrase').textContent = '';

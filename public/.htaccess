@@ -18,6 +18,12 @@ AddDefaultCharset utf-8
     Header always set X-Content-Type-Options "nosniff"
     Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
     Header always set Strict-Transport-Security "max-age=31536000"
+
+    # Revalidate on every load (cheap with ETags), so a deploy, including a
+    # changed keys.json, reaches every visitor at once.
+    <FilesMatch "\.(html|js|css|json)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
 </IfModule>
 
 # In case private/ ends up inside the webroot

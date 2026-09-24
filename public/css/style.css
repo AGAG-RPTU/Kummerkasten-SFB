@@ -189,30 +189,6 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 /* ---------------------------------------------------------- codeword */
 
-.codeword {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1rem 0;
-  padding: 0;
-  list-style: none;
-  counter-reset: word;
-}
-.codeword li {
-  counter-increment: word;
-  background: var(--accent-wash);
-  border: 1px solid var(--accent-soft);
-  border-radius: 8px;
-  padding: 0.35rem 0.7rem;
-  font: 600 1.15rem/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-}
-.codeword li::before {
-  content: counter(word);
-  color: var(--muted);
-  font-size: 0.75rem;
-  margin-right: 0.4rem;
-  vertical-align: super;
-}
 /* One click selects the whole phrase, ready to copy. */
 .phrase {
   font: 600 1.1rem/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;

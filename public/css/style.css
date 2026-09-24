@@ -34,6 +34,11 @@
   }
 }
 
+/* The logo's grey lettering disappears on a dark background. */
+@media (prefers-color-scheme: dark) {
+  .brand img { background: #fff; border-radius: 6px; padding: 3px 6px; box-sizing: content-box; }
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
@@ -66,11 +71,15 @@ header.site .inner {
   padding-bottom: 0.9rem;
 }
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   font-weight: 700;
   text-decoration: none;
   color: var(--accent);
   margin-right: auto;
 }
+.brand img { display: block; height: 40px; width: auto; }
 header.site nav {
   display: flex;
   flex-wrap: wrap;

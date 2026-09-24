@@ -10,6 +10,7 @@ const MIME_TYPES = [
     'css' => 'text/css; charset=utf-8',
     'json' => 'application/json',
     'txt' => 'text/plain; charset=utf-8',
+    'png' => 'image/png',
 ];
 
 $htaccess = file_get_contents(__DIR__ . '/../public/.htaccess');

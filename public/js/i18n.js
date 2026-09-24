@@ -5,6 +5,7 @@
 const STRINGS = {
   en: {
     'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.short': 'Kummerkasten',
     'site.tagline': 'A confidential line to the trusted persons of the SFB',
     'nav.home': 'About',
     'nav.write': 'Write',
@@ -113,6 +114,7 @@ const STRINGS = {
 
   de: {
     'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.short': 'Kummerkasten',
     'site.tagline': 'Ein vertraulicher Draht zu den Vertrauenspersonen des SFB',
     'nav.home': 'Info',
     'nav.write': 'Schreiben',

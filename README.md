@@ -2,10 +2,19 @@
 
 A contact form for members of the SFB TRR 195 to reach the trusted persons
 (Vertrauenspersonen), anonymously or by name. Senders receive a six-word
-codeword and use it to return, read replies and answer.
+codeword and use it to return, read replies and answer. Live at
+<https://kummerkasten.coxeter.de/>.
 
 Messages are encrypted in the browser. The server stores ciphertext only;
 neither its operator nor a stolen database reveals content.
+
+**[SECURITY.md](SECURITY.md)** explains the security design, what is and is
+not protected, and how to check that the site runs the published code:
+
+```sh
+tools/verify.sh https://kummerkasten.coxeter.de/     # does the site serve the commit it names?
+tools/local.py https://kummerkasten.coxeter.de/      # use the site from this checkout instead
+```
 
 ## How it works
 
@@ -17,36 +26,26 @@ neither its operator nor a stolen database reveals content.
    public/keys.json                 #123456" (no content)            opens K, decrypts, replies
 ```
 
-- `public/js/crypto.js` has the whole protocol; `private/app.php` the API.
-- Trusted persons' public keys live in `public/keys.json`, in git, so swapping
-  them on the server shows up in `tools/verify.sh`.
-- Appends are signed by the codeword's key or a trusted person's key; the
-  server enforces a gapless sequence per conversation.
-- Plaintext is padded to 512-byte blocks, stored times are rounded to the
-  nearest hour, and the application stores no IP addresses.
-
-Codewords share one Argon2 salt, so an attacker with the database tests each
-guess against all conversations at once; 62 bits leave ample margin at the
-expected scale.
-
-Limits (the info page names those that matter to senders): whoever controls
-the server can deliver altered JavaScript (detectable with `tools/verify.sh`,
-not preventable); the server can drop messages; no forward secrecy, so a
-leaked passphrase exposes that person's past conversations; web server access
-logs and host backups are outside the application's control.
+- `public/js/crypto.js` holds the cryptography, `public/js/pow.js` the proof
+  of work, `public/js/send.js` the retry-safe sending; `private/app.php` is
+  the whole API.
+- Trusted persons' public keys and notification addresses live in
+  `public/keys.json`, in git, so swapping them on the server shows up in
+  `tools/verify.sh`.
 
 ## Layout
 
 ```
-public/     webroot: pages, JS, vendored libsodium, api.php entry point, .htaccess
-private/    app.php, schema.sql, config.php (not in git), data/ (SQLite)
+public/     webroot: pages, js/, css/, img/, vendored libsodium, keys.json, api.php, .htaccess
+private/    app.php, schema.sql, config.example.php; on the server also config.php and data/
 tests/      node --test: unit tests, API tests against php -S, keys.json checks
-tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, deploy.sh, verify.sh
+tools/      deploy.sh, verify.sh, local.py, vendor.sh, dev-env.js, dev-router.php, hash-password.php
 ```
 
 ## Development
 
-Requires Node ≥ 20 and PHP ≥ 8.1 with `sodium` and `pdo_sqlite`.
+Requires Node ≥ 20 and PHP ≥ 8.1 with `sodium` and `pdo_sqlite`;
+`tools/local.py` needs Python 3.
 
 ```sh
 npm test                      # ~15 s
@@ -56,8 +55,8 @@ KK_CONFIG=$PWD/private/data/dev/config.php \
   -S localhost:8765 -t public tools/dev-router.php
 ```
 
-`tools/dev-router.php` applies the headers from `public/.htaccess`, so the
-Content Security Policy is active locally too.
+`tools/dev-router.php` applies the headers and clean URLs of
+`public/.htaccess`, so the Content Security Policy is active locally too.
 
 `tools/vendor.sh` regenerates `public/vendor/` and `public/js/wordlist.js`;
 `cd public/vendor && shasum -a 256 -c SHA256SUMS` checks the vendored files.
@@ -75,7 +74,8 @@ Host checklist (netcup, the current host, meets all of these; on `gap-www`
   where `open_basedir` usually confines PHP; its `.htaccess` denies web
   access. Check with `curl -I <site>/private/app.php`, which must give 403.
 - Access logs: ask the host to disable or anonymise IP logging for this site,
-  then adjust `index.security.body` in `public/js/i18n.js` accordingly.
+  switch off web statistics built from them, and state the log retention in
+  `public/privacy.html`.
 
 Steps:
 
@@ -83,16 +83,18 @@ Steps:
    `public/` to the webroot, `private/` to `<webroot>/private`, and writes
    `version.txt` with the commit hash, which the footer links to on GitHub.
    It removes files git no longer has and leaves `config.php` and the
-   database alone.
+   database alone. Deploy only commits pushed to GitHub, so that others can
+   verify them.
 2. On the host, copy `private/config.example.php` to `private/config.php` and
-   fill it in: at least `pow_secret`, and `password_hash` if the SFB access
-   password should be required.
+   set `pow_secret`, `site_url` and `mail_from`, plus `password_hash` if the
+   SFB access password should be required. Settings left out use the
+   defaults in `DEFAULT_CONFIG` in `app.php`.
 3. Each trusted person opens `/setup` on the deployed site, on their own
    device, and sends the displayed JSON entry to the maintainer, who adds it
    to `public/keys.json`, runs `npm test` (which checks every entry, including
-   the notification address), commits and deploys. Notification addresses
-   are public there, like the names.
-4. `tools/verify.sh https://…/ <deployed-ref>` must report `ok` for every file.
+   the notification address), commits, pushes and deploys. Notification
+   addresses are public there, like the names.
+4. `tools/verify.sh https://…/` must end with `All files match`.
 
 Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
 
@@ -103,9 +105,10 @@ Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
 - `tools/deploy.sh` warns while the legal pages still name netcup.
 
 Changing trusted persons: a person added later cannot read or act on
-conversations that started before. Removing someone from `keys.json` stops
-them from listing, replying and closing, but anyone who once held a
-conversation's key and ID can keep reading it; keys are never rotated.
+conversations that started before, and a person who replaces their key loses
+access to their earlier ones. Removing someone from `keys.json` stops them
+from listing, replying and closing, but anyone who once held a conversation's
+key and ID can keep reading it; keys are never rotated.
 
 Spam protection for new conversations: the browser solves a proof-of-work
 challenge in a worker while the sender writes (`pow` in `config.php`; see

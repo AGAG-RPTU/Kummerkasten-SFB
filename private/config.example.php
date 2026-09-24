@@ -6,8 +6,9 @@ return [
     // SQLite file; its directory must be writable by the web server.
     'db' => __DIR__ . '/data/kummerkasten.sqlite',
 
-    // Trusted persons: public keys and notification addresses (in git, see README).
-    'keys_file' => __DIR__ . '/../public/keys.json',
+    // Trusted persons: public keys and notification addresses (in git, see
+    // README). tools/deploy.sh puts private/ inside the webroot, next to it.
+    'keys_file' => __DIR__ . '/../keys.json',
 
     // SFB access password for starting a conversation, or null for none
     // (proof of work alone then keeps out spam):

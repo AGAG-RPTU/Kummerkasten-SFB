@@ -12,6 +12,7 @@ const STRINGS = {
     'nav.open': 'My conversation',
     'lang.other': 'Deutsch',
     'footer.source': 'Source code',
+    'footer.security': 'Security',
     'footer.staff': 'For trusted persons',
     'footer.sfb': 'SFB TRR 195 website',
     'footer.imprint': 'Imprint',
@@ -27,7 +28,7 @@ const STRINGS = {
     'index.people.title': 'Who reads your message',
     'index.people.body': 'Only these persons can decrypt messages. Each has a key; its fingerprint is shown so that it can be compared with the published source code.',
     'index.security.title': 'Privacy and security',
-    'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>The trusted persons are notified of new messages by email; these emails contain no message content, but they are sent at once, so they show when you wrote.</li><li>Times are stored rounded to the nearest hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is <a href="{sourceUrl}">open source</a>, such a change can be detected by comparing the delivered files with the published ones.</li></ul>',
+    'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>The trusted persons are notified of new messages by email; these emails contain no message content, but they are sent at once, so they show when you wrote.</li><li>Times are stored rounded to the nearest hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is <a href="{sourceUrl}">open source</a>, anyone can check that the site delivers exactly the published version, though such a check shows only what the checker received. Trusted persons can avoid the risk by running the pages from their own verified copy. Details: <a href="{securityUrl}">security documentation</a>.</li></ul>',
     'index.fingerprint': 'Key fingerprint',
     'index.people.none': 'No trusted persons are registered yet.',
 
@@ -149,6 +150,7 @@ const STRINGS = {
     'nav.open': 'Meine Unterhaltung',
     'lang.other': 'English',
     'footer.source': 'Quellcode',
+    'footer.security': 'Sicherheit',
     'footer.staff': 'Für Vertrauenspersonen',
     'footer.sfb': 'Website des SFB TRR 195',
     'footer.imprint': 'Impressum',
@@ -164,7 +166,7 @@ const STRINGS = {
     'index.people.title': 'Wer deine Nachricht liest',
     'index.people.body': 'Nur diese Personen können Nachrichten entschlüsseln. Jede hat einen Schlüssel; sein Fingerabdruck steht hier, damit man ihn mit dem veröffentlichten Quellcode vergleichen kann.',
     'index.security.title': 'Datenschutz und Sicherheit',
-    'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Die Vertrauenspersonen werden per E-Mail über neue Nachrichten benachrichtigt; diese E-Mails enthalten keinen Nachrichteninhalt, werden aber sofort verschickt und zeigen daher, wann du geschrieben hast.</li><li>Zeiten werden auf die nächste volle Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der <a href="{sourceUrl}">Code offen</a> ist, lässt sich so eine Änderung durch Vergleich der ausgelieferten mit den veröffentlichten Dateien erkennen.</li></ul>',
+    'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Die Vertrauenspersonen werden per E-Mail über neue Nachrichten benachrichtigt; diese E-Mails enthalten keinen Nachrichteninhalt, werden aber sofort verschickt und zeigen daher, wann du geschrieben hast.</li><li>Zeiten werden auf die nächste volle Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der <a href="{sourceUrl}">Code offen</a> ist, kann jeder prüfen, ob die Seite genau die veröffentlichte Version ausliefert; eine solche Prüfung zeigt allerdings nur, was die prüfende Person erhalten hat. Vertrauenspersonen können das Risiko umgehen, indem sie die Seiten aus einer eigenen, geprüften Kopie laufen lassen. Details: <a href="{securityUrl}">Sicherheitsdokumentation</a> (englisch).</li></ul>',
     'index.fingerprint': 'Fingerabdruck des Schlüssels',
     'index.people.none': 'Es sind noch keine Vertrauenspersonen eingetragen.',
 

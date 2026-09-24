@@ -24,7 +24,7 @@ const STRINGS = {
     'index.people.title': 'Who reads your message',
     'index.people.body': 'Only these persons can decrypt messages. Each has a key; its fingerprint is shown so that it can be compared with the published source code.',
     'index.security.title': 'Privacy and security',
-    'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>Times are stored rounded to the hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is open source, such a change can be detected by comparing the delivered files with the published ones.</li></ul>',
+    'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>Times are stored rounded to the hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is <a href="{sourceUrl}">open source</a>, such a change can be detected by comparing the delivered files with the published ones.</li></ul>',
     'index.fingerprint': 'Key fingerprint',
     'index.people.none': 'No trusted persons are registered yet.',
 
@@ -144,7 +144,7 @@ const STRINGS = {
     'index.people.title': 'Wer deine Nachricht liest',
     'index.people.body': 'Nur diese Personen können Nachrichten entschlüsseln. Jede hat einen Schlüssel; sein Fingerabdruck steht hier, damit man ihn mit dem veröffentlichten Quellcode vergleichen kann.',
     'index.security.title': 'Datenschutz und Sicherheit',
-    'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Zeiten werden auf die Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der Code offen ist, lässt sich so eine Änderung durch Vergleich der ausgelieferten mit den veröffentlichten Dateien erkennen.</li></ul>',
+    'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Zeiten werden auf die Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der <a href="{sourceUrl}">Code offen</a> ist, lässt sich so eine Änderung durch Vergleich der ausgelieferten mit den veröffentlichten Dateien erkennen.</li></ul>',
     'index.fingerprint': 'Fingerabdruck des Schlüssels',
     'index.people.none': 'Es sind noch keine Vertrauenspersonen eingetragen.',
 
@@ -263,9 +263,16 @@ export function currentLang() {
   return lang;
 }
 
+// Placeholders every string may use, e.g. {sourceUrl}; set by site.js.
+const globals = {};
+
+export function setGlobals(values) {
+  Object.assign(globals, values);
+}
+
 export function t(key, vars = {}) {
   const text = STRINGS[lang][key] ?? STRINGS.en[key] ?? key;
-  return text.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? '');
+  return text.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? globals[name] ?? '');
 }
 
 export function formatTime(unixSeconds) {

@@ -1,7 +1,7 @@
 -- Run on every request, so every statement must be idempotent. Adding a
 -- column to an existing table needs a migration.
 --
--- Times are Unix seconds rounded down to the hour. Keys, ciphertexts and
+-- Times are Unix seconds rounded to the nearest hour. Keys, ciphertexts and
 -- signatures are stored as base64 text.
 
 CREATE TABLE IF NOT EXISTS conversations (

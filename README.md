@@ -22,7 +22,7 @@ neither its operator nor a stolen database reveals content.
   them on the server shows up in `tools/verify.sh`.
 - Appends are signed by the codeword's key or a trusted person's key; the
   server enforces a gapless sequence per conversation.
-- Plaintext is padded to 512-byte blocks; stored times are rounded to the hour;
+- Plaintext is padded to 512-byte blocks; stored times are rounded to the nearest hour;
   the application stores no IP addresses.
 
 Codewords share one Argon2 salt, so an attacker with the database tests each

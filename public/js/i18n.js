@@ -60,6 +60,7 @@ const STRINGS = {
     'conv.codeword': 'Codeword',
     'conv.hint': 'Six words, separated by spaces or dashes. The first three letters of each word are enough.',
     'conv.show': 'Show codeword',
+    'time.approx': '{date}, around {hour}',
     'conv.open': 'Open',
     'conv.recognised': 'Recognised {n} of {total} words: {words}',
     'conv.unknown': 'Unknown: {words}',
@@ -187,6 +188,7 @@ const STRINGS = {
     'conv.codeword': 'Codewort',
     'conv.hint': 'Sechs Wörter, getrennt durch Leerzeichen oder Bindestriche. Die ersten drei Buchstaben jedes Worts genügen.',
     'conv.show': 'Codewort anzeigen',
+    'time.approx': '{date}, ca. {hour}',
     'conv.open': 'Öffnen',
     'conv.recognised': '{n} von {total} Wörtern erkannt: {words}',
     'conv.unknown': 'Unbekannt: {words}',
@@ -289,8 +291,13 @@ export function t(key, vars = {}) {
   return text.replace(/\{(\w+)\}/g, (_, name) => vars[name] ?? globals[name] ?? '');
 }
 
-export function formatTime(unixSeconds) {
-  return new Date(unixSeconds * 1000).toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' });
+// Stored times are rounded to the nearest hour, so say "around 2 PM"
+// rather than show a false minute.
+export function formatTime(unixSeconds, { locale = lang, timeZone } = {}) {
+  const time = new Date(unixSeconds * 1000);
+  const date = time.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric', timeZone });
+  const hour = time.toLocaleTimeString(locale, { hour: 'numeric', timeZone });
+  return STRINGS[locale]['time.approx'].replace('{date}', date).replace('{hour}', hour);
 }
 
 const listeners = [];

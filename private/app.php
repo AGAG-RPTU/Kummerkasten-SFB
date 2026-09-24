@@ -564,7 +564,13 @@ function count_up(PDO $db, string $name): void
 // Stored times are coarse so they are less useful for linking a message to a person.
 function now_hour(): int
 {
-    return intdiv(time(), HOUR) * HOUR;
+    return rounded_hour(time());
+}
+
+// Nearest full hour: 1:30:01-2:30:00 becomes 2:00.
+function rounded_hour(int $time): int
+{
+    return intdiv($time + HOUR / 2 - 1, HOUR) * HOUR;
 }
 
 function b64(string $bytes): string

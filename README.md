@@ -81,7 +81,7 @@ Steps:
 
 1. `tools/deploy.sh <ssh-host> <webroot>` copies the committed `HEAD`:
    `public/` to the webroot, `private/` to `<webroot>/private`, and writes
-   `version.txt`, which the footer shows. It removes files git no longer has
+   `version.txt` with the commit hash, which the footer links to on GitHub. It removes files git no longer has
    and leaves `config.php` and the database alone.
 2. On the host, copy `private/config.example.php` to `private/config.php` and
    fill it in: at least `pow_secret`, and `password_hash` if the SFB access

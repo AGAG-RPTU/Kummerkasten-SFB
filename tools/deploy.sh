@@ -17,7 +17,7 @@ trap 'rm -rf "$tmp"' EXIT
 git archive "$ref" public private | tar xf - -C "$tmp"
 mv "$tmp/private" "$tmp/public/private"
 mkdir "$tmp/public/private/data"
-git rev-parse --short "$ref" > "$tmp/public/version.txt"
+git rev-parse "$ref^{commit}" > "$tmp/public/version.txt"     # full hash; the footer links it
 
 # List the entries instead of '.', so the webroot keeps its own mode
 cd "$tmp/public"
@@ -37,7 +37,7 @@ if [ -s "$tmp/stale.txt" ]; then
     ssh "$host" "cd '$root' && xargs rm -f --" < "$tmp/stale.txt"
 fi
 
-echo "deployed $(cat "$tmp/public/version.txt") to $host:$root"
+echo "deployed $(git rev-parse --short "$ref") to $host:$root"
 
 # netcup is a temporary host; the legal pages must name the real one.
 if [ "$host" != netcup ] && grep -q 'netcup GmbH' public/imprint.html public/privacy.html; then

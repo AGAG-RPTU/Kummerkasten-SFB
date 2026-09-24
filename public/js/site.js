@@ -5,6 +5,9 @@ import { applyI18n, setGlobals, toggleLang } from './i18n.js';
 // Public repository, linked in the footer so visitors can compare files.
 export const SOURCE_URL = 'https://github.com/AGAG-RPTU/Kummerkasten-SFB';
 
+const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
+const SHORT_COMMIT = 7;
+
 // Warning banner on every page until the site is fit for real use.
 const PREVIEW = true;
 
@@ -33,10 +36,16 @@ export function initPage() {
   source.hidden = !SOURCE_URL;
   source.href = SOURCE_URL;
 
-  // version.txt is written at deploy time (see README)
+  // version.txt holds the deployed commit, written by tools/deploy.sh. The
+  // footer links it, so anyone can compare the site with that exact code.
   fetch('version.txt').then((r) => (r.ok ? r.text() : '')).then((v) => {
-    if (v.trim()) {
-      document.getElementById('version').textContent = v.trim();
+    const commit = v.trim();
+    if (!COMMIT_PATTERN.test(commit)) {
+      return;
     }
+    const link = document.getElementById('version');
+    link.textContent = commit.slice(0, SHORT_COMMIT);
+    link.href = `${SOURCE_URL}/commit/${commit}`;
+    link.hidden = false;
   }).catch(() => {});
 }

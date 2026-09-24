@@ -86,9 +86,10 @@ Steps:
    fill it in: at least `pow_secret`, and `password_hash` if the SFB access
    password should be required.
 3. Each trusted person opens `setup.html` on the deployed site, on their own
-   device, and sends the displayed JSON entry to the maintainer. The maintainer
-   adds it to `public/keys.json`, commits, deploys, and adds the email address
-   to `staff_email` in `config.php`.
+   device, and sends the displayed JSON entry to the maintainer, who adds it
+   to `public/keys.json`, runs `npm test` (which checks every entry, including
+   the notification address), commits and deploys. Notification addresses
+   are public there, like the names.
 4. `tools/verify.sh https://…/ <deployed-ref>` must report `ok` for every file.
 
 Changing trusted persons: a person added later cannot read or act on

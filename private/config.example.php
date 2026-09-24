@@ -26,11 +26,8 @@ return [
     // Base URL of the site, used in notifications.
     'site_url' => 'https://example.org/kummerkasten/',
 
-    // Notification targets per staff id from keys.json. Notifications never
-    // contain message content.
-    'staff_email' => [
-        // 'hannah' => 'hannah@example.org',
-    ],
+    // Notifications go to the addresses in keys.json and never contain
+    // message content.
     'mail_from' => 'kummerkasten@example.org',
 
     // Optional ntfy topic URL (https://ntfy.sh/<unguessable-topic>), or null.

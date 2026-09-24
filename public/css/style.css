@@ -124,7 +124,7 @@ label:first-child { margin-top: 0; }
 label.check { font-weight: normal; margin: 0.4rem 0 0; }
 .hint { color: var(--muted); font-size: 0.9rem; margin: 0.25rem 0 0; }
 
-input[type=text], input[type=password], select, textarea {
+input[type=text], input[type=password], input[type=email], select, textarea {
   width: 100%;
   font: inherit;
   color: inherit;

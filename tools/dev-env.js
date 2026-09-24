@@ -19,7 +19,7 @@ mkdirSync(DIR, { recursive: true });
 
 const entries = STAFF.map(({ id, name, passphrase }) => {
   const keys = kk.deriveStaff(kk.parseWords(passphrase).words, id);
-  return { id, name, box: kk.toB64(keys.box.publicKey), sign: kk.toB64(keys.sign.publicKey) };
+  return { id, name, email: `${id}@example.org`, box: kk.toB64(keys.box.publicKey), sign: kk.toB64(keys.sign.publicKey) };
 });
 writeFileSync(`${DIR}keys.json`, JSON.stringify({ staff: entries }, null, 2));
 
@@ -32,7 +32,6 @@ return [
     'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 7200],
     'pow_secret' => '${randomBytes(32).toString('hex')}',
     'site_url' => 'http://localhost:8765/',
-    'staff_email' => ['alice' => 'alice@example.org', 'bob' => 'bob@example.org'],
     'mail_from' => 'kummerkasten@example.org',
     'ntfy_url' => null,
     'retention' => ['closed_days' => 30, 'inactive_days' => 365],

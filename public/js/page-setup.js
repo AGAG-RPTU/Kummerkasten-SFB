@@ -50,6 +50,7 @@ $('form').addEventListener('submit', async (event) => {
   const entry = {
     id,
     name: $('staff-name').value.trim(),
+    email: $('staff-email').value.trim(),
     box: kk.toB64(keys.box.publicKey),
     sign: kk.toB64(keys.sign.publicKey),
   };

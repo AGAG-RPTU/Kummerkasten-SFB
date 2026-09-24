@@ -81,7 +81,6 @@ function writeConfig({ password = true } = {}) {
     'pow' => ['bits' => ${POW.bits}, 'count' => ${POW.count}, 'ttl' => ${POW.ttl}],
     'pow_secret' => '${POW_SECRET}',
     'site_url' => 'https://example.org/kk/',
-    'staff_email' => ['hannah' => 'h@example.org', 'gabriela' => 'g@example.org'],
     'mail_from' => 'kk@example.org',
     'ntfy_url' => null,
     'retention' => ['closed_days' => 30, 'inactive_days' => 365],
@@ -107,7 +106,7 @@ before(async () => {
   dir = mkdtempSync(join(tmpdir(), 'kk-test-'));
   writeFileSync(join(dir, 'keys.json'), JSON.stringify({
     staff: Object.entries(staff).map(([id, k]) => ({
-      id, name: id, box: kk.toB64(k.box.publicKey), sign: kk.toB64(k.sign.publicKey),
+      id, name: id, email: `${id[0]}@example.org`, box: kk.toB64(k.box.publicKey), sign: kk.toB64(k.sign.publicKey),
     })),
   }));
   passwordHash = execFileSync('php', ['-r', `echo password_hash('${PASSWORD}', PASSWORD_DEFAULT);`]).toString();

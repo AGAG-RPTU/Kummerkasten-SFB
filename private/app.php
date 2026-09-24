@@ -156,7 +156,7 @@ function create(PDO $db, array $req, array $config, array $staff): array
         throw $e;
     }
 
-    notify($config, array_keys($staff), "New conversation #$publicId");
+    notify($config, $staff, array_keys($staff), "New conversation #$publicId");
     return ['public_id' => $publicId];
 }
 
@@ -224,7 +224,7 @@ function append(PDO $db, array $req, array $config, array $staff): array
     if ($notify) {
         $others = array_values(array_diff(array_keys($staff), [$author]));
         $what = $author === SENDER ? 'New message' : 'New reply by a colleague';
-        notify($config, $others, "$what in conversation #{$conv['public_id']}");
+        notify($config, $staff, $others, "$what in conversation #{$conv['public_id']}");
     }
     return ['seq' => $seq];
 }
@@ -370,7 +370,7 @@ function verify(string $statement, string $signature, string $publicKey): void
     }
 }
 
-// keys.json: {"staff": [{"id": ..., "name": ..., "box": b64, "sign": b64}, ...]}
+// keys.json: {"staff": [{"id": ..., "name": ..., "email": ..., "box": b64, "sign": b64}, ...]}
 function load_staff(string $file): array
 {
     $data = json_decode((string)file_get_contents($file), true, 8, JSON_THROW_ON_ERROR);
@@ -379,7 +379,10 @@ function load_staff(string $file): array
         if (!preg_match(STAFF_ID_PATTERN, $entry['id'])) {
             throw new RuntimeException("invalid staff id in keys.json");
         }
-        $staff[$entry['id']] = ['sign' => unb64($entry['sign'])];
+        $staff[$entry['id']] = [
+            'sign' => unb64($entry['sign']),
+            'email' => is_string($entry['email'] ?? null) ? $entry['email'] : null,
+        ];
     }
     return $staff;
 }
@@ -587,7 +590,7 @@ function unb64(string $text): string
 
 // Best effort: a failed notification must not fail the request, and staff see
 // new messages on the staff page anyway. Never put message content here.
-function notify(array $config, array $staffIds, string $subject): void
+function notify(array $config, array $staff, array $staffIds, string $subject): void
 {
     $body = "$subject.\n\nRead it at {$config['site_url']}staff.html\n\n"
         . "This notification contains no message content.\n";
@@ -598,7 +601,7 @@ function notify(array $config, array $staffIds, string $subject): void
         'Auto-Submitted' => 'auto-generated',
     ];
     foreach ($staffIds as $id) {
-        $to = $config['staff_email'][$id] ?? null;
+        $to = $staff[$id]['email'];
         if ($to !== null && !@mail($to, "[Kummerkasten] $subject", $body, $headers)) {
             error_log("kummerkasten: mail to staff '$id' failed");
         }

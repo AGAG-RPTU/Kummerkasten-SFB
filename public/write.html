@@ -26,7 +26,8 @@
 
 <form id="form" class="card" autocomplete="off">
   <label for="password" data-i18n="write.password"></label>
-  <input id="password" type="password" required autocomplete="off">
+  <input id="password" type="password" required autocomplete="off" aria-describedby="password-hint">
+  <p id="password-hint" class="hint" data-i18n="write.passwordHint"></p>
 
   <label for="category" data-i18n="write.category"></label>
   <select id="category">
@@ -70,6 +71,7 @@
 <footer class="site">
   <a id="source-link" data-i18n="footer.source"></a>
   <span id="version"></span>
+  <a href="https://www.computeralgebra.de/sfb/" data-i18n="footer.sfb"></a>
   <a href="staff.html" data-i18n="footer.staff"></a>
 </footer>
 </body>

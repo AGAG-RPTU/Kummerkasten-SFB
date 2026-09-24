@@ -13,6 +13,7 @@ const STRINGS = {
     'lang.other': 'Deutsch',
     'footer.source': 'Source code',
     'footer.staff': 'For trusted persons',
+    'footer.sfb': 'SFB TRR 195 website',
 
     'index.intro': '<p>Did something happen within the SFB that weighs on you: discrimination, harassment, a conflict, a problem you cannot solve alone? Or do you have a suggestion? Write to the trusted persons here, anonymously or with your name.</p>',
     'index.write': 'Write a message',
@@ -24,9 +25,11 @@ const STRINGS = {
     'index.security.title': 'Privacy and security',
     'index.security.body': '<ul><li>Your message is encrypted in your browser before it is sent. The server stores only encrypted data. Only you (with the codeword) and the trusted persons can read it.</li><li>The application stores no IP addresses. The web server’s access log may record them for a limited time.</li><li>Times are stored rounded to the hour; the length of a message is rounded up to 512 characters.</li><li>To hide even the fact that you visited this page, use the <a href="https://www.torproject.org/">Tor Browser</a>.</li><li>Whoever runs the server could deliver altered program code. Because the code is open source, such a change can be detected by comparing the delivered files with the published ones.</li></ul>',
     'index.fingerprint': 'Key fingerprint',
+    'index.people.none': 'No trusted persons are registered yet.',
 
     'write.title': 'Write a message',
     'write.password': 'Shared password',
+    'write.passwordHint': 'The password announced to all SFB members; it only keeps out spam. You do not choose a secret here: your personal codeword for reading replies is created when you send.',
     'write.category': 'Category',
     'cat.problem': 'Report a problem',
     'cat.feedback': 'Suggestion or feedback',
@@ -122,6 +125,7 @@ const STRINGS = {
     'lang.other': 'English',
     'footer.source': 'Quellcode',
     'footer.staff': 'Für Vertrauenspersonen',
+    'footer.sfb': 'Website des SFB TRR 195',
 
     'index.intro': '<p>Ist im SFB etwas passiert, das dich belastet: Diskriminierung, Belästigung, ein Konflikt, ein Problem, das du nicht allein lösen kannst? Oder hast du einen Vorschlag? Schreib den Vertrauenspersonen hier, anonym oder mit Namen.</p>',
     'index.write': 'Nachricht schreiben',
@@ -133,9 +137,11 @@ const STRINGS = {
     'index.security.title': 'Datenschutz und Sicherheit',
     'index.security.body': '<ul><li>Deine Nachricht wird in deinem Browser verschlüsselt, bevor sie gesendet wird. Der Server speichert nur verschlüsselte Daten. Lesen können sie nur du (mit dem Codewort) und die Vertrauenspersonen.</li><li>Die Anwendung speichert keine IP-Adressen. Das Zugriffsprotokoll des Webservers kann sie für begrenzte Zeit enthalten.</li><li>Zeiten werden auf die Stunde gerundet gespeichert; die Länge einer Nachricht wird auf 512 Zeichen aufgerundet.</li><li>Wenn auch niemand sehen soll, dass du diese Seite besucht hast, nutze den <a href="https://www.torproject.org/de/">Tor Browser</a>.</li><li>Wer den Server betreibt, könnte veränderten Programmcode ausliefern. Da der Code offen ist, lässt sich so eine Änderung durch Vergleich der ausgelieferten mit den veröffentlichten Dateien erkennen.</li></ul>',
     'index.fingerprint': 'Fingerabdruck des Schlüssels',
+    'index.people.none': 'Es sind noch keine Vertrauenspersonen eingetragen.',
 
     'write.title': 'Nachricht schreiben',
     'write.password': 'Gemeinsames Passwort',
+    'write.passwordHint': 'Das Passwort, das allen SFB-Mitgliedern bekanntgegeben wird; es hält nur Spam fern. Hier wählst du kein Geheimnis: Dein persönliches Codewort zum Lesen der Antworten wird beim Absenden erzeugt.',
     'write.category': 'Kategorie',
     'cat.problem': 'Problem melden',
     'cat.feedback': 'Vorschlag oder Rückmeldung',

@@ -9,6 +9,10 @@ initPage();
 let staff = [];
 
 function render() {
+  if (!staff.length) {
+    $('people').replaceChildren(h('li', { class: 'note' }, t('index.people.none')));
+    return;
+  }
   $('people').replaceChildren(...staff.map((s) => h('li', {},
     h('strong', {}, s.name), h('br'),
     h('code', {}, `${t('index.fingerprint')}: ${fingerprint(s.box)}`))));

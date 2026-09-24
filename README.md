@@ -137,3 +137,14 @@ the database reaches `database_bytes`, trusted persons are not. Sender
 messages notify at most once per hour per conversation until a trusted person
 replies, and past `notifications_per_hour` one summary mail replaces the
 rest. Wrong passwords never lock anyone out.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Not covered, and under their own terms:
+
+- `public/vendor/`: libsodium.js, ISC license (`public/vendor/LICENSE.libsodium`).
+- `public/js/wordlist.js`: the EFF short wordlist 2.0,
+  [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/), by the
+  Electronic Frontier Foundation.
+- `public/img/trr195-logo.png`: the logo of the SFB-TRR 195, which this
+  license does not grant any rights to.

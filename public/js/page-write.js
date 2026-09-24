@@ -1,7 +1,8 @@
 import { initPage } from './site.js';
 import { t, onLanguageChange } from './i18n.js';
 import * as kk from './crypto.js';
-import { call, loadStaff, now } from './api.js';
+import { call, loadStaff, now, isNetworkError } from './api.js';
+import { createDraft, sendDraft } from './send.js';
 import { $, h, status, nextPaint, apiErrorText } from './ui.js';
 
 initPage();
@@ -10,6 +11,7 @@ initPage();
 const POW_MARGIN = 60;
 
 let codeword = null;
+let draft = null;                   // one codeword per message, however many attempts
 let saved = false;
 let pow = null;                     // promise of a solved challenge
 let powProgress = 0;
@@ -65,6 +67,24 @@ function showPowState() {
 startPow();
 onLanguageChange(showPowState);
 
+// Awaited by sendDraft() only when a request actually goes out.
+async function solvedPow() {
+  if (!powDone) {
+    status($('status'), 'info', t('pow.waiting'));
+  }
+  let solved = await pow;
+  if (solved.expires - now() < POW_MARGIN) {
+    startPow();
+    solved = await pow;
+  }
+  status($('status'), 'info', t('status.sending'));
+  return solved;
+}
+
+function sameContent(a, b) {
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])].every((k) => a[k] === b[k]);
+}
+
 $('form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const body = $('body').value.trim();
@@ -74,26 +94,15 @@ $('form').addEventListener('submit', async (event) => {
   }
 
   $('send').disabled = true;
+  status($('status'), 'info', t('status.encrypting'));
+  await nextPaint();
   try {
-    if (!powDone) {
-      status($('status'), 'info', t('pow.waiting'));
-    }
-    let solved = await pow;
-    if (solved.expires - now() < POW_MARGIN) {
-      startPow();
-      solved = await pow;
-    }
-
-    status($('status'), 'info', t('status.encrypting'));
-    await nextPaint();
     await kk.ready;
     const staff = await loadStaff();
     if (!staff.length) {
       throw new Error(t('err.notConfigured'));
     }
 
-    const words = kk.generateWords(kk.CODEWORD_WORDS);
-    const sender = kk.deriveSender(words.split(' '));
     const content = { category: $('category').value, subject: $('subject').value.trim(), body };
     for (const field of ['name', 'contact']) {
       const value = $(field).value.trim();
@@ -101,23 +110,15 @@ $('form').addEventListener('submit', async (event) => {
         content[field] = value;
       }
     }
-    const ciphertext = kk.encryptMessage(sender.key, sender.convId, 1, 'sender', content);
 
-    status($('status'), 'info', t('status.sending'));
-    await call('create', {
-      password: $('password').value,
-      pow: solved,
-      conv_id: sender.convId,
-      sender_sign_pk: kk.toB64(sender.sign.publicKey),
-      sealed_keys: Object.fromEntries(staff.map((s) => [s.id, kk.sealKey(sender.key, s.box)])),
-      ciphertext,
-      signature: kk.sign(kk.appendStatement(sender.convId, 1, 'sender', ciphertext), sender.sign),
-    });
+    draft ??= createDraft();
+    const { earlier } = await sendDraft(draft, { content, staff, password: $('password').value, pow: solvedPow }, call);
 
-    codeword = words;
+    codeword = draft.words;
+    $('earlier').hidden = !earlier || sameContent(earlier, content);
     showCodeword();
   } catch (err) {
-    status($('status'), 'error', err.status ? apiErrorText(err) : err.message);
+    status($('status'), 'error', err.status || isNetworkError(err) ? apiErrorText(err) : err.message);
     $('send').disabled = false;
     startPow();     // the server spends a challenge on every attempt
   }

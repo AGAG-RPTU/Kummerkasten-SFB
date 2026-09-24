@@ -47,6 +47,7 @@ const STRINGS = {
     'pow.done': 'Anti-spam check complete.',
     'pow.waiting': 'Finishing the anti-spam check…',
     'done.title': 'Sent. This is your codeword:',
+    'done.earlier': 'An earlier attempt had already arrived, with the text as it was then. Open the conversation to check it and add any changes as a reply.',
     'done.warn': 'Write it down or save it now. It is the only way to read replies, and it cannot be recovered.',
     'done.copy': 'Copy',
     'done.copied': 'Copied',
@@ -129,6 +130,7 @@ const STRINGS = {
     'err.id': 'The id must start with a lowercase letter and contain only a–z, 0–9 and _.',
     'err.conflict': 'Someone wrote in the meantime. The conversation was reloaded; please send again.',
     'err.decrypt': '[This message could not be decrypted.]',
+    'err.network': 'No answer from the server; the connection may have dropped. Please try again. Nothing will be sent twice.',
   },
 
   de: {
@@ -175,6 +177,7 @@ const STRINGS = {
     'pow.done': 'Spam-Schutz abgeschlossen.',
     'pow.waiting': 'Spam-Schutz wird abgeschlossen…',
     'done.title': 'Gesendet. Das ist dein Codewort:',
+    'done.earlier': 'Ein früherer Versuch war bereits angekommen, mit dem damaligen Text. Öffne die Unterhaltung, um ihn zu prüfen, und ergänze Änderungen als Antwort.',
     'done.warn': 'Schreib es jetzt auf oder speichere es. Nur damit kannst du Antworten lesen, und es lässt sich nicht wiederherstellen.',
     'done.copy': 'Kopieren',
     'done.copied': 'Kopiert',
@@ -257,6 +260,7 @@ const STRINGS = {
     'err.id': 'Der Kurzname muss mit einem Kleinbuchstaben beginnen und darf nur a–z, 0–9 und _ enthalten.',
     'err.conflict': 'Inzwischen hat jemand geschrieben. Die Unterhaltung wurde neu geladen; bitte erneut senden.',
     'err.decrypt': '[Diese Nachricht konnte nicht entschlüsselt werden.]',
+    'err.network': 'Keine Antwort vom Server; vielleicht ist die Verbindung abgebrochen. Bitte erneut versuchen. Es wird nichts doppelt gesendet.',
   },
 };
 

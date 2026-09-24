@@ -3,7 +3,7 @@
 
 import { t } from './i18n.js';
 import { parseWords } from './crypto.js';
-import { ApiError } from './api.js';
+import { ApiError, isNetworkError } from './api.js';
 
 export function $(id) {
   return document.getElementById(id);
@@ -41,6 +41,9 @@ export function nextPaint() {
 }
 
 export function apiErrorText(err) {
+  if (isNetworkError(err)) {
+    return t('err.network');
+  }
   if (err instanceof ApiError) {
     if (err.status === 401) return t('err.password');
     if (err.status === 429) return t('err.rate');

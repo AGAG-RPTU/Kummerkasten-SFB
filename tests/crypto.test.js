@@ -1,7 +1,9 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import * as kk from '../public/js/crypto.js';
 import { WORDLIST } from '../public/js/wordlist.js';
+import { solve, leadingZeroBits } from '../public/js/pow.js';
 
 const CODEWORD = ['aardvark', 'yoyo', 'zucchini', 'banana', 'lucidity', 'oyster'];
 
@@ -99,4 +101,21 @@ test('decryptMessage rejects plaintexts that are not messages', () => {
 test('staff ids cannot collide with the sender', () => {
   assert.ok(kk.STAFF_ID_PATTERN.test('hannah'));
   assert.ok(!kk.STAFF_ID_PATTERN.test('sender'));
+});
+
+test('leadingZeroBits', () => {
+  assert.equal(leadingZeroBits(Uint8Array.of(0x80)), 0);
+  assert.equal(leadingZeroBits(Uint8Array.of(0x01)), 7);
+  assert.equal(leadingZeroBits(Uint8Array.of(0, 0x10)), 11);
+  assert.equal(leadingZeroBits(Uint8Array.of(0, 0)), 16);
+});
+
+test('proof-of-work solutions match the PHP check', () => {
+  const challenge = { salt: 'c'.repeat(32), bits: 8, count: 3 };
+  const nonces = solve(challenge);
+  const php = execFileSync('php', ['-r', `
+    require '${new URL('../private/app.php', import.meta.url).pathname}';
+    foreach (json_decode($argv[1]) as $i => $n) echo leading_zero_bits(hash('sha256', "${challenge.salt}|$i|$n", true)), ' ';`,
+    JSON.stringify(nonces)]).toString().trim().split(' ').map(Number);
+  assert.ok(php.every((b) => b >= challenge.bits), php.join());
 });

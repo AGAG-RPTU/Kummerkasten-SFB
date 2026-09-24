@@ -4,6 +4,7 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import * as kk from '../public/js/crypto.js';
 
 const DIR = new URL('../private/data/dev/', import.meta.url).pathname;
@@ -28,6 +29,8 @@ return [
     'db' => __DIR__ . '/kummerkasten.sqlite',
     'keys_file' => __DIR__ . '/keys.json',
     'password_hash' => '${hash}',
+    'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 7200],
+    'pow_secret' => '${randomBytes(32).toString('hex')}',
     'site_url' => 'http://localhost:8765/',
     'staff_email' => ['alice' => 'alice@example.org', 'bob' => 'bob@example.org'],
     'mail_from' => 'kummerkasten@example.org',

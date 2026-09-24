@@ -17,6 +17,7 @@ const CLOCK_SKEW = 300;                 // seconds accepted for signed timestamp
 const MAX_REQUEST_BYTES = 262144;
 const MAX_CIPHERTEXT_BYTES = 65536;
 const SEALED_KEY_BYTES = SODIUM_CRYPTO_BOX_SEALBYTES + 32;
+const POW_SALT_PATTERN = '/^[0-9a-f]{32}$/';
 const PUBLIC_ID_MIN = 100000;
 const PUBLIC_ID_MAX = 999999;
 
@@ -60,12 +61,14 @@ function run(string $privateDir): void
         $staff = load_staff($config['keys_file']);
 
         $result = match ($req['action'] ?? null) {
+            'challenge' => challenge($config),
             'create' => create($db, $req, $config, $staff),
             'get' => get($db, $req),
             'append' => append($db, $req, $config, $staff),
             'delete' => delete($db, $req),
             'staff_list' => staff_list($db, $req, $staff),
             'staff_close' => staff_close($db, $req, $staff),
+            'staff_delete_vote' => staff_delete_vote($db, $req, $staff),
             default => throw new HttpError('unknown action', HTTP_BAD_REQUEST),
         };
         respond(HTTP_OK, $result);
@@ -85,11 +88,32 @@ function respond(int $status, array $data): void
 
 // ------------------------------------------------------------------ actions
 
+// A proof-of-work challenge, plus whether the SFB access password is
+// switched on (password_hash set in the config).
+function challenge(array $config): array
+{
+    $pow = $config['pow'];
+    $salt = bin2hex(random_bytes(16));
+    $expires = time() + $pow['ttl'];
+    return [
+        'salt' => $salt,
+        'bits' => $pow['bits'],
+        'count' => $pow['count'],
+        'expires' => $expires,
+        'signature' => pow_signature($config, $salt, $pow['bits'], $pow['count'], $expires),
+        'password_required' => !empty($config['password_hash']),
+    ];
+}
+
 function create(PDO $db, array $req, array $config, array $staff): array
 {
+    // Checked first, so every password guess costs a solved challenge too.
+    verify_pow($db, $req['pow'] ?? null, $config);
+
     // No lockout after wrong passwords: a global one would let anyone block
     // everybody. The password only keeps out spam; bcrypt slows guessing.
-    if (!password_verify(trim((string)($req['password'] ?? '')), $config['password_hash'])) {
+    if (!empty($config['password_hash'])
+        && !password_verify(trim((string)($req['password'] ?? '')), $config['password_hash'])) {
         throw new HttpError('wrong password', HTTP_UNAUTHORIZED);
     }
     if (counter($db, 'create') >= $config['limits']['creates_per_hour']) {
@@ -180,6 +204,9 @@ function append(PDO $db, array $req, array $config, array $staff): array
         }
         insert_message($db, $convId, $seq, $author, $ciphertext, now_hour());
 
+        // Nobody should delete a message they have not seen.
+        query($db, 'DELETE FROM delete_votes WHERE conv_id = ?', [$convId]);
+
         // Sender messages notify at most once per hour, so a flood of appends
         // cannot flood mailboxes; a staff reply re-arms the notification.
         $notify = $author !== SENDER || $conv['notified_at'] === null || $conv['notified_at'] < now_hour();
@@ -226,6 +253,9 @@ function staff_list(PDO $db, array $req, array $staff): array
                         ORDER BY c.updated_at DESC, c.public_id', [$staffId])->fetchAll();
     foreach ($rows as &$row) {
         $row['messages'] = messages($db, $row['conv_id']);
+        $row['delete_voters'] = delete_voters($db, $row['conv_id'], $staff);
+        $row['delete_votes'] = query($db, 'SELECT staff_id FROM delete_votes WHERE conv_id = ? ORDER BY staff_id',
+            [$row['conv_id']])->fetchAll(PDO::FETCH_COLUMN);
     }
     return ['conversations' => $rows];
 }
@@ -260,6 +290,60 @@ function staff_close(PDO $db, array $req, array $staff): array
         throw $e;
     }
     return [];
+}
+
+// Staff delete a conversation only when all of them agree: each casts a
+// signed vote, and the last missing vote deletes it. Votes are bound to the
+// last message and cleared by any new one.
+function staff_delete_vote(PDO $db, array $req, array $staff): array
+{
+    $staffId = staff_field($req, $staff);
+    $timestamp = timestamp_field($req);
+    $publicId = $req['public_id'] ?? null;
+    $lastSeq = $req['last_seq'] ?? null;
+    $vote = $req['vote'] ?? null;
+    if (!is_int($publicId) || !is_int($lastSeq) || !is_bool($vote)) {
+        throw new HttpError('invalid public_id, last_seq or vote', HTTP_BAD_REQUEST);
+    }
+    $voteWord = $vote ? 'yes' : 'no';
+    verify(PROTOCOL . "/delete-vote|$staffId|$publicId|$lastSeq|$voteWord|$timestamp",
+        b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES), $staff[$staffId]['sign']);
+
+    $convId = query($db, 'SELECT conv_id FROM conversations WHERE public_id = ?', [$publicId])->fetchColumn()
+        ?: throw new HttpError('not found', HTTP_NOT_FOUND);
+    require_recipient($db, $convId, $staffId);
+
+    $db->exec('BEGIN IMMEDIATE');
+    try {
+        $last = (int)query($db, 'SELECT MAX(seq) FROM messages WHERE conv_id = ?', [$convId])->fetchColumn();
+        if ($lastSeq !== $last) {
+            throw new HttpError('conversation changed, reload', HTTP_CONFLICT);
+        }
+        if ($vote) {
+            query($db, 'INSERT OR IGNORE INTO delete_votes (conv_id, staff_id) VALUES (?, ?)', [$convId, $staffId]);
+        } else {
+            query($db, 'DELETE FROM delete_votes WHERE conv_id = ? AND staff_id = ?', [$convId, $staffId]);
+        }
+        $votes = query($db, 'SELECT staff_id FROM delete_votes WHERE conv_id = ?', [$convId])->fetchAll(PDO::FETCH_COLUMN);
+        $deleted = !array_diff(delete_voters($db, $convId, $staff), $votes);
+        if ($deleted) {
+            query($db, 'DELETE FROM conversations WHERE conv_id = ?', [$convId]);
+        }
+        $db->exec('COMMIT');
+    } catch (Throwable $e) {
+        $db->exec('ROLLBACK');
+        throw $e;
+    }
+    return ['deleted' => $deleted];
+}
+
+// Whose vote a deletion needs: staff who hold the conversation's key and are
+// still in keys.json. Someone removed from keys.json cannot block it.
+function delete_voters(PDO $db, string $convId, array $staff): array
+{
+    $recipients = query($db, 'SELECT staff_id FROM recipient_keys WHERE conv_id = ? ORDER BY staff_id', [$convId])
+        ->fetchAll(PDO::FETCH_COLUMN);
+    return array_values(array_intersect($recipients, array_keys($staff)));
 }
 
 // A trusted person added after a conversation started holds no key for it
@@ -298,6 +382,62 @@ function load_staff(string $file): array
         $staff[$entry['id']] = ['sign' => unb64($entry['sign'])];
     }
     return $staff;
+}
+
+// ------------------------------------------------------------------ proof of work
+// Must match public/js/pow.js.
+
+function pow_signature(array $config, string $salt, int $bits, int $count, int $expires): string
+{
+    return hash_hmac('sha256', PROTOCOL . "/pow|$salt|$bits|$count|$expires", $config['pow_secret']);
+}
+
+function verify_pow(PDO $db, mixed $pow, array $config): void
+{
+    $valid = is_array($pow)
+        && is_string($pow['salt'] ?? null) && preg_match(POW_SALT_PATTERN, $pow['salt'])
+        && is_int($pow['bits'] ?? null) && is_int($pow['count'] ?? null) && is_int($pow['expires'] ?? null)
+        && is_string($pow['signature'] ?? null) && is_array($pow['nonces'] ?? null);
+    if (!$valid) {
+        throw new HttpError('missing or malformed proof of work', HTTP_BAD_REQUEST);
+    }
+    ['salt' => $salt, 'bits' => $bits, 'count' => $count, 'expires' => $expires, 'nonces' => $nonces] = $pow;
+
+    // Signed by us, not expired, and at least as hard as currently configured.
+    if (!hash_equals(pow_signature($config, $salt, $bits, $count, $expires), $pow['signature'])
+        || $bits < $config['pow']['bits'] || $count < $config['pow']['count']) {
+        throw new HttpError('invalid proof of work', HTTP_FORBIDDEN);
+    }
+    if ($expires < time()) {
+        throw new HttpError('proof of work expired', HTTP_FORBIDDEN);
+    }
+    if (!array_is_list($nonces) || count($nonces) !== $count) {
+        throw new HttpError('invalid proof of work', HTTP_FORBIDDEN);
+    }
+    foreach ($nonces as $i => $nonce) {
+        if (!is_int($nonce) || $nonce < 0 || leading_zero_bits(hash('sha256', "$salt|$i|$nonce", true)) < $bits) {
+            throw new HttpError('invalid proof of work', HTTP_FORBIDDEN);
+        }
+    }
+
+    // Each challenge counts once. Rows expire with the challenge.
+    try {
+        query($db, 'INSERT INTO used_challenges (salt, expires) VALUES (?, ?)', [$salt, $expires]);
+    } catch (PDOException) {
+        throw new HttpError('proof of work already used', HTTP_FORBIDDEN);
+    }
+}
+
+function leading_zero_bits(string $hash): int
+{
+    $bits = 0;
+    foreach (unpack('C*', $hash) as $byte) {
+        if ($byte !== 0) {
+            return $bits + 8 - strlen(decbin($byte));
+        }
+        $bits += 8;
+    }
+    return $bits;
 }
 
 // ------------------------------------------------------------------ input
@@ -353,7 +493,6 @@ function b64_field(array $req, string $name, ?int $length = null): string
 
 function open_db(string $file, string $schemaFile): PDO
 {
-    $isNew = !file_exists($file);
     $db = new PDO('sqlite:' . $file, null, null, [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -362,9 +501,8 @@ function open_db(string $file, string $schemaFile): PDO
     $db->exec('PRAGMA foreign_keys = ON');
     $db->exec('PRAGMA secure_delete = ON');     // overwrite deleted content in the file
     $db->exec('PRAGMA busy_timeout = 5000');
-    if ($isNew) {
-        $db->exec((string)file_get_contents($schemaFile));
-    }
+    // Idempotent, so tables added later appear in existing databases.
+    $db->exec((string)file_get_contents($schemaFile));
     return $db;
 }
 
@@ -409,6 +547,7 @@ function expire(PDO $db, array $retention): void
         time() - $retention['inactive_days'] * DAY,
     ]);
     query($db, 'DELETE FROM counters WHERE hour < ?', [now_hour() - DAY]);
+    query($db, 'DELETE FROM used_challenges WHERE expires < ?', [time()]);
 }
 
 function counter(PDO $db, string $name): int

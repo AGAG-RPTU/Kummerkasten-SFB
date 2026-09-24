@@ -12,7 +12,7 @@ neither its operator nor a stolen database reveals content.
 ```
  sender browser                    server (PHP + SQLite)              trusted person's browser
  codeword ─Argon2id─► conv_id,  ──► stores ciphertext, sealed keys,
-   signing key, conversation key K  checks shared password and       passphrase ─Argon2id─► key pair
+   signing key, conversation key K  checks proof of work and         passphrase ─Argon2id─► key pair
  K sealed to each public key in     signatures, mails "new message   ◄── signed list request
    public/keys.json                 #123456" (no content)            opens K, decrypts, replies
 ```
@@ -49,8 +49,8 @@ tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, deploy.sh,
 Requires Node ≥ 20 and PHP ≥ 8.1 with `sodium` and `pdo_sqlite`.
 
 ```sh
-npm test                      # 31 tests, ~10 s
-node tools/dev-env.js         # dev config, shared password "dev", two dev trusted persons
+npm test                      # 37 tests, ~15 s
+node tools/dev-env.js         # dev config, access password "dev", two dev trusted persons
 KK_CONFIG=$PWD/private/data/dev/config.php \
   php -d "sendmail_path=cat >> $PWD/private/data/dev/mail.log" \
   -S localhost:8765 -t public tools/dev-router.php
@@ -83,8 +83,8 @@ Steps:
    `version.txt`, which the footer shows. It leaves `config.php` and the
    database alone.
 2. On the host, copy `private/config.example.php` to `private/config.php` and
-   fill it in. Generate the shared password hash with
-   `php tools/hash-password.php`.
+   fill it in: at least `pow_secret`, and `password_hash` if the SFB access
+   password should be required.
 3. Each trusted person opens `setup.html` on the deployed site, on their own
    device, and sends the displayed JSON entry to the maintainer. The maintainer
    adds it to `public/keys.json`, commits, deploys, and adds the email address
@@ -96,12 +96,18 @@ conversations that started before. Removing someone from `keys.json` stops
 them from listing, replying and closing, but anyone who once held a
 conversation's key and ID can keep reading it; keys are never rotated.
 
-Changing the shared password: replace `password_hash` in `config.php`. Senders
-with a codeword are unaffected.
+Spam protection for new conversations: the browser solves a proof-of-work
+challenge in a worker while the sender writes (`pow` in `config.php`; see
+`public/js/pow.js`). The SFB access password is optional on top: set
+`password_hash` (from `php tools/hash-password.php`) to require it, `null` to
+drop it. `write.html#pw=<password>` fills it in; the fragment never reaches
+the server. Changing it does not affect senders who already have a codeword.
 
 Retention: closed conversations are deleted after `closed_days`, all others
 after `inactive_days` without a message. Senders can delete their own
-conversation at any time.
+conversation at any time. Trusted persons delete only unanimously: each votes,
+the last missing vote deletes, and any new message clears the votes. Only
+people in `keys.json` who hold the conversation's key count.
 
 Abuse limits (`limits` in `config.php`): new conversations per hour
 site-wide, messages per conversation. Sender messages notify at most once per

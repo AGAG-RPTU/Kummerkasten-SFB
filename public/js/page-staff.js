@@ -113,6 +113,15 @@ function renderConversation(c) {
     });
   });
 
+  const voted = c.delete_votes.includes(me.id);
+  const missing = c.delete_voters.filter((id) => !c.delete_votes.includes(id));
+  const votes = c.delete_votes.length
+    ? h('p', { class: 'note' }, t('staff.deleteVotes', {
+      voted: c.delete_votes.map(authorName).join(', '),
+      missing: missing.map(authorName).join(', '),
+    }))
+    : null;
+
   const replyBody = c.key ? h('textarea', { maxlength: '20000', required: '', 'aria-label': t('conv.reply') }) : null;
   const replyStatus = h('p', { class: 'status', hidden: '' });
   const form = h('form', { class: 'card', onsubmit: (e) => reply(e, c, replyBody, replyStatus) },
@@ -120,7 +129,10 @@ function renderConversation(c) {
     h('div', { class: 'actions' },
       c.key ? h('button', { type: 'submit' }, t('conv.send')) : null,
       c.status === 'closed' ? null
-        : h('button', { type: 'button', class: 'secondary', onclick: () => close(c, replyStatus) }, t('staff.close'))),
+        : h('button', { type: 'button', class: 'secondary', onclick: () => close(c, replyStatus) }, t('staff.close')),
+      h('button', { type: 'button', class: 'danger', onclick: () => voteDelete(c, !voted, replyStatus) },
+        t(voted ? 'staff.unvoteDelete' : 'staff.voteDelete'))),
+    votes,
     replyStatus);
 
   const details = h('details', {},
@@ -172,6 +184,28 @@ async function close(c, replyStatus) {
     await call('staff_close', {
       staff_id: me.id, public_id: c.public_id, last_seq: lastSeq, timestamp,
       signature: kk.sign(kk.staffCloseStatement(me.id, c.public_id, lastSeq, timestamp), me.keys.sign),
+    });
+    await load();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      await load();
+    }
+    status(replyStatus, 'error', apiErrorText(err));
+  }
+}
+
+// Deletion needs the votes of all trusted persons; see staff_delete_vote()
+// in private/app.php.
+async function voteDelete(c, vote, replyStatus) {
+  if (vote && !confirm(t('staff.deleteConfirm'))) {
+    return;
+  }
+  const timestamp = now();
+  const lastSeq = c.messages.at(-1).seq;
+  try {
+    await call('staff_delete_vote', {
+      staff_id: me.id, public_id: c.public_id, last_seq: lastSeq, vote, timestamp,
+      signature: kk.sign(kk.staffDeleteVoteStatement(me.id, c.public_id, lastSeq, vote, timestamp), me.keys.sign),
     });
     await load();
   } catch (err) {

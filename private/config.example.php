@@ -8,9 +8,20 @@ return [
     // Public keys of the trusted persons (committed to git, see README).
     'keys_file' => __DIR__ . '/../public/keys.json',
 
-    // Shared password for starting a conversation:
+    // SFB access password for starting a conversation, or null for none
+    // (proof of work alone then keeps out spam):
     //   php tools/hash-password.php
-    'password_hash' => '',
+    'password_hash' => null,
+
+    // Proof of work for starting a conversation: count puzzles of `bits` zero
+    // bits each, 2^bits * count SHA-256 hashes on average. 17/16 takes about
+    // 3 s on a recent laptop, 10 s on a mid-range phone, in the background
+    // while the sender writes. ttl is how long a challenge stays valid (s).
+    'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 7200],
+
+    // Random key for signing challenges:
+    //   php -r 'echo bin2hex(random_bytes(32)), "\n";'
+    'pow_secret' => '',
 
     // Base URL of the site, used in notifications.
     'site_url' => 'https://example.org/kummerkasten/',

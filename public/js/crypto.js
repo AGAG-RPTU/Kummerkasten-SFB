@@ -169,6 +169,10 @@ export function staffCloseStatement(staffId, publicId, lastSeq, timestamp) {
   return `${PROTOCOL}/close|${staffId}|${publicId}|${lastSeq}|${timestamp}`;
 }
 
+export function staffDeleteVoteStatement(staffId, publicId, lastSeq, vote, timestamp) {
+  return `${PROTOCOL}/delete-vote|${staffId}|${publicId}|${lastSeq}|${vote ? 'yes' : 'no'}|${timestamp}`;
+}
+
 export function sign(statement, signKeyPair) {
   return toB64(sodium.crypto_sign_detached(statement, signKeyPair.privateKey));
 }

@@ -8,11 +8,15 @@ import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHmac } from 'node:crypto';
 import * as kk from '../public/js/crypto.js';
+import { solve } from '../public/js/pow.js';
 
 const ROOT = new URL('..', import.meta.url).pathname;
 const PASSWORD = 'sfb-secret';
 const MESSAGE_LIMIT = 6;
+const POW = { bits: 4, count: 4, ttl: 600 };
+const POW_SECRET = 'a'.repeat(64);
 const SECRET_TEXT = 'nobody-but-staff-may-read-this';
 
 let server;
@@ -31,7 +35,19 @@ function now() {
   return Math.floor(Date.now() / 1000);
 }
 
-function createRequest(s, overrides = {}) {
+async function solvedChallenge() {
+  const { data } = await api({ action: 'challenge' });
+  return { ...data, nonces: solve(data) };
+}
+
+// Signs a challenge the way the server does, to forge edge cases.
+function signedChallenge({ salt = 'b'.repeat(32), bits = POW.bits, count = POW.count, expires = now() + 60 } = {}) {
+  const signature = createHmac('sha256', POW_SECRET).update(`kk1/pow|${salt}|${bits}|${count}|${expires}`).digest('hex');
+  const challenge = { salt, bits, count, expires, signature };
+  return { ...challenge, nonces: solve(challenge) };
+}
+
+async function createRequest(s, overrides = {}) {
   const ciphertext = kk.encryptMessage(s.key, s.convId, 1, 'sender', { subject: 'Hi', body: SECRET_TEXT });
   return {
     action: 'create',
@@ -42,6 +58,7 @@ function createRequest(s, overrides = {}) {
       ([id, k]) => [id, kk.sealKey(s.key, kk.toB64(k.box.publicKey))])),
     ciphertext,
     signature: kk.sign(kk.appendStatement(s.convId, 1, 'sender', ciphertext), s.sign),
+    pow: await solvedChallenge(),
     ...overrides,
   };
 }
@@ -52,6 +69,24 @@ function appendRequest(convId, key, seq, author, signKeys, content = { body: 'mo
     action: 'append', conv_id: convId, seq, author, ciphertext,
     signature: kk.sign(kk.appendStatement(convId, seq, author, ciphertext), signKeys),
   };
+}
+
+let passwordHash;
+
+function writeConfig({ password = true } = {}) {
+  writeFileSync(join(dir, 'config.php'), `<?php return [
+    'db' => '${dir}/db.sqlite',
+    'keys_file' => '${dir}/keys.json',
+    'password_hash' => ${password ? `'${passwordHash}'` : 'null'},
+    'pow' => ['bits' => ${POW.bits}, 'count' => ${POW.count}, 'ttl' => ${POW.ttl}],
+    'pow_secret' => '${POW_SECRET}',
+    'site_url' => 'https://example.org/kk/',
+    'staff_email' => ['hannah' => 'h@example.org', 'gabriela' => 'g@example.org'],
+    'mail_from' => 'kk@example.org',
+    'ntfy_url' => null,
+    'retention' => ['closed_days' => 30, 'inactive_days' => 365],
+    'limits' => ['creates_per_hour' => 100, 'messages_per_conversation' => ${MESSAGE_LIMIT}],
+  ];`);
 }
 
 function staffList(id, timestamp = now()) {
@@ -75,22 +110,14 @@ before(async () => {
       id, name: id, box: kk.toB64(k.box.publicKey), sign: kk.toB64(k.sign.publicKey),
     })),
   }));
-  const hash = execFileSync('php', ['-r', `echo password_hash('${PASSWORD}', PASSWORD_DEFAULT);`]).toString();
-  writeFileSync(join(dir, 'config.php'), `<?php return [
-    'db' => '${dir}/db.sqlite',
-    'keys_file' => '${dir}/keys.json',
-    'password_hash' => '${hash}',
-    'site_url' => 'https://example.org/kk/',
-    'staff_email' => ['hannah' => 'h@example.org', 'gabriela' => 'g@example.org'],
-    'mail_from' => 'kk@example.org',
-    'ntfy_url' => null,
-    'retention' => ['closed_days' => 30, 'inactive_days' => 365],
-    'limits' => ['creates_per_hour' => 100, 'messages_per_conversation' => ${MESSAGE_LIMIT}],
-  ];`);
+  passwordHash = execFileSync('php', ['-r', `echo password_hash('${PASSWORD}', PASSWORD_DEFAULT);`]).toString();
+  writeConfig();
+
 
   const port = 18000 + Math.floor(Math.random() * 1000);
   url = `http://127.0.0.1:${port}/api.php`;
-  server = spawn('php', ['-d', `sendmail_path=cat >> ${dir}/mail.log`, '-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')], {
+  // opcache would keep serving a rewritten config.php
+  server = spawn('php', ['-d', 'opcache.enable=0', '-d', `sendmail_path=cat >> ${dir}/mail.log`, '-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')], {
     env: { ...process.env, KK_CONFIG: join(dir, 'config.php') },
     stdio: 'ignore',
   });
@@ -113,24 +140,24 @@ test('GET is rejected', async () => {
 });
 
 test('create with wrong password', async () => {
-  const { status } = await api(createRequest(sender, { password: 'nope' }));
+  const { status } = await api(await createRequest(sender, { password: 'nope' }));
   assert.equal(status, 401);
 });
 
 test('create must seal the key for every staff member', async () => {
-  const req = createRequest(sender);
+  const req = await createRequest(sender);
   delete req.sealed_keys.gabriela;
   assert.equal((await api(req)).status, 400);
 });
 
 test('create with a signature by another key', async () => {
   const other = kk.deriveSender(['aardvark']);
-  const req = createRequest(sender, { sender_sign_pk: kk.toB64(other.sign.publicKey) });
+  const req = await createRequest(sender, { sender_sign_pk: kk.toB64(other.sign.publicKey) });
   assert.equal((await api(req)).status, 403);
 });
 
 test('create and read back', async () => {
-  const { status, data } = await api(createRequest(sender));
+  const { status, data } = await api(await createRequest(sender));
   assert.equal(status, 200);
   publicId = data.public_id;
   assert.ok(publicId >= 100000 && publicId <= 999999);
@@ -142,7 +169,7 @@ test('create and read back', async () => {
   assert.equal(m.created_at % 3600, 0);
   assert.equal(kk.decryptMessage(sender.key, sender.convId, m.seq, m.author, m.ciphertext).body, SECRET_TEXT);
 
-  assert.equal((await api(createRequest(sender))).status, 409);
+  assert.equal((await api(await createRequest(sender))).status, 409);
 });
 
 test('get unknown conversation', async () => {
@@ -237,12 +264,11 @@ test('sender deletes the conversation', async () => {
   assert.equal((await staffList('hannah')).data.conversations.length, 0);
 });
 
-function newConversation() {
+async function newConversation() {
   const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
-  return api(createRequest(s)).then(({ status, data }) => {
-    assert.equal(status, 200);
-    return { ...s, publicId: data.public_id };
-  });
+  const { status, data } = await api(await createRequest(s));
+  assert.equal(status, 200);
+  return { ...s, publicId: data.public_id };
 }
 
 function closeRequest(id, publicId, lastSeq, timestamp = now()) {
@@ -253,8 +279,9 @@ function closeRequest(id, publicId, lastSeq, timestamp = now()) {
 }
 
 test('wrong passwords never lock out the right one', async () => {
+  const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
   for (let i = 0; i < 8; i++) {
-    assert.equal((await api({ action: 'create', password: 'x' })).status, 401);
+    assert.equal((await api(await createRequest(s, { password: 'x' }))).status, 401);
   }
   await newConversation();
 });
@@ -303,4 +330,76 @@ test('sender messages notify at most once an hour until staff reply', async () =
   await api(appendRequest(c.convId, c.key, 4, 'sender', c.sign));
   await api(appendRequest(c.convId, c.key, 5, 'sender', c.sign));
   assert.equal(count(), 2);     // one mail to each of the two staff
+});
+
+function voteRequest(id, c, lastSeq, vote) {
+  const timestamp = now();
+  return {
+    action: 'staff_delete_vote', staff_id: id, public_id: c.publicId, last_seq: lastSeq, vote, timestamp,
+    signature: kk.sign(kk.staffDeleteVoteStatement(id, c.publicId, lastSeq, vote, timestamp), staff[id].sign),
+  };
+}
+
+async function votesOf(c) {
+  const conv = (await staffList('hannah')).data.conversations.find((x) => x.public_id === c.publicId);
+  return conv?.delete_votes;
+}
+
+test('create needs a valid, unused proof of work', async () => {
+  const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+  assert.equal((await api(await createRequest(s, { pow: undefined }))).status, 400);
+
+  const pow = await solvedChallenge();
+  assert.equal((await api(await createRequest(s, { pow: { ...pow, signature: '0'.repeat(64) } }))).status, 403);
+  assert.equal((await api(await createRequest(s, { pow: { ...pow, nonces: pow.nonces.map((n) => n + 1) } }))).status, 403);
+  assert.equal((await api(await createRequest(s, { pow: signedChallenge({ expires: now() - 1 }) }))).status, 403);
+  assert.equal((await api(await createRequest(s, { pow: signedChallenge({ bits: POW.bits - 1 }) }))).status, 403);
+
+  assert.equal((await api(await createRequest(s, { pow }))).status, 200);
+  const other = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+  assert.equal((await api(await createRequest(other, { pow }))).status, 403);
+});
+
+test('the password can be switched off', async () => {
+  assert.equal((await api({ action: 'challenge' })).data.password_required, true);
+  writeConfig({ password: false });
+  try {
+    assert.equal((await api({ action: 'challenge' })).data.password_required, false);
+    const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+    assert.equal((await api(await createRequest(s, { password: undefined }))).status, 200);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('deletion needs every trusted person, votes reset on new messages', async () => {
+  const c = await newConversation();
+
+  assert.deepEqual((await api(voteRequest('hannah', c, 1, true))).data, { deleted: false });
+  assert.deepEqual(await votesOf(c), ['hannah']);
+  await api(voteRequest('hannah', c, 1, false));
+  assert.deepEqual(await votesOf(c), []);
+
+  await api(voteRequest('hannah', c, 1, true));
+  await api(appendRequest(c.convId, c.key, 2, 'sender', c.sign));
+  assert.deepEqual(await votesOf(c), []);
+  assert.equal((await api(voteRequest('gabriela', c, 1, true))).status, 409);
+
+  assert.deepEqual((await api(voteRequest('hannah', c, 2, true))).data, { deleted: false });
+  assert.deepEqual((await api(voteRequest('gabriela', c, 2, true))).data, { deleted: true });
+  assert.equal((await api({ action: 'get', conv_id: c.convId })).status, 404);
+});
+
+test('a removed trusted person does not block deletion', async () => {
+  const c = await newConversation();
+  const keysFile = join(dir, 'keys.json');
+  const original = readFileSync(keysFile, 'utf8');
+  const keys = JSON.parse(original);
+  keys.staff = keys.staff.filter((e) => e.id !== 'gabriela');
+  writeFileSync(keysFile, JSON.stringify(keys));
+  try {
+    assert.deepEqual((await api(voteRequest('hannah', c, 1, true))).data, { deleted: true });
+  } finally {
+    writeFileSync(keysFile, original);
+  }
 });

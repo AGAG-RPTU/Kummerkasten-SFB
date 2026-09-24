@@ -31,9 +31,13 @@ export function status(el, kind, text = '') {
   el.hidden = !kind;
 }
 
-// Argon2 blocks the main thread; let the status message paint first.
+// Argon2 blocks the main thread; let the status message paint first. The
+// timeout covers background tabs, where animation frames never fire.
 export function nextPaint() {
-  return new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => setTimeout(resolve, 0));
+    setTimeout(resolve, 100);
+  });
 }
 
 export function apiErrorText(err) {

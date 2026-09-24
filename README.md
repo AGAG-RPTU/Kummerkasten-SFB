@@ -146,5 +146,5 @@ MIT, see [LICENSE](LICENSE). Not covered, and under their own terms:
 - `public/js/wordlist.js`: the EFF short wordlist 2.0,
   [CC BY 3.0 US](https://creativecommons.org/licenses/by/3.0/us/), by the
   Electronic Frontier Foundation.
-- `public/img/trr195-logo.png`: the logo of the SFB-TRR 195, which this
-  license does not grant any rights to.
+- `public/img/trr195-logo.png`: the logo of the SFB-TRR 195, used on this
+  site at the SFB's request; this license grants no rights to it.

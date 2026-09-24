@@ -118,6 +118,12 @@ $('delete').addEventListener('click', async () => {
 
 $('lock').addEventListener('click', lock);
 
+// Hidden by default against onlookers; the word check then shows counts only.
+$('show-codeword').addEventListener('change', () => {
+  $('codeword').type = $('show-codeword').checked ? 'text' : 'password';
+  refreshFeedback();
+});
+
 function lock() {
   sender = null;
   conv = null;
@@ -126,6 +132,8 @@ function lock() {
   status($('reply-status'), '');
   $('conversation').hidden = true;
   $('unlock').hidden = false;
+  $('show-codeword').checked = false;
+  $('codeword').type = 'password';
   refreshFeedback();
 }
 

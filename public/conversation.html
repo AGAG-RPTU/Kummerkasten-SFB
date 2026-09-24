@@ -26,7 +26,8 @@
 
 <form id="unlock" class="card" autocomplete="off">
   <label for="codeword" data-i18n="conv.codeword"></label>
-  <input id="codeword" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+  <input id="codeword" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+  <label class="check"><input id="show-codeword" type="checkbox"> <span data-i18n="conv.show"></span></label>
   <p class="hint" data-i18n="conv.hint"></p>
   <div id="feedback" class="feedback" aria-live="polite"></div>
   <div class="actions"><button type="submit" data-i18n="conv.open"></button></div>

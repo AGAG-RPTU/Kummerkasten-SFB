@@ -145,7 +145,11 @@ $('download').addEventListener('click', () => {
 
 $('saved').addEventListener('change', () => {
   saved = $('saved').checked;
-  $('next').hidden = !saved;
+  $('next').disabled = !saved;
+});
+
+$('next').addEventListener('click', () => {
+  location.href = 'conversation.html';
 });
 
 // The codeword exists only on this page until the sender has saved it.

@@ -41,7 +41,7 @@ outside the application's control.
 public/     webroot: pages, JS, vendored libsodium, api.php entry point, .htaccess
 private/    app.php, schema.sql, config.php (not in git), data/ (SQLite)
 tests/      node --test: crypto unit tests, API tests against php -S
-tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, verify.sh
+tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, deploy.sh, verify.sh
 ```
 
 ## Development
@@ -70,25 +70,26 @@ Host checklist (`gap-www` meets all of these):
 - Apache with `.htaccess` support for `mod_headers` and `mod_rewrite`.
 - `mail()` delivers (`sendmail_path` set, relay configured). Otherwise set
   `ntfy_url` in the config for push notifications instead.
-- A directory outside the webroot for `private/`, writable by PHP. If there is
-  none, keep `private/` inside the webroot; its `.htaccess` denies access.
+- `private/` writable by PHP. `tools/deploy.sh` puts it inside the webroot,
+  where `open_basedir` usually confines PHP; its `.htaccess` denies web
+  access. Check with `curl -I <site>/private/app.php`, which must give 403.
 - Access logs: ask the host to disable or anonymise IP logging for this site,
   then adjust `index.security.body` in `public/js/i18n.js` accordingly.
 
 Steps:
 
-1. Copy `public/` to the webroot and `private/` next to it. If `private/` sits
-   elsewhere, add `SetEnv KK_PRIVATE_DIR /path/to/private` to
-   `public/.htaccess`.
-2. `cp private/config.example.php private/config.php` and fill it in. Generate
-   the shared password hash with `php tools/hash-password.php`.
+1. `tools/deploy.sh <ssh-host> <webroot>` copies the committed `HEAD`:
+   `public/` to the webroot, `private/` to `<webroot>/private`, and writes
+   `version.txt`, which the footer shows. It leaves `config.php` and the
+   database alone.
+2. On the host, copy `private/config.example.php` to `private/config.php` and
+   fill it in. Generate the shared password hash with
+   `php tools/hash-password.php`.
 3. Each trusted person opens `setup.html` on the deployed site, on their own
    device, and sends the displayed JSON entry to the maintainer. The maintainer
    adds it to `public/keys.json`, commits, deploys, and adds the email address
    to `staff_email` in `config.php`.
-4. `git rev-parse --short HEAD > public/version.txt` on the deployed copy; the
-   footer shows it.
-5. `tools/verify.sh https://…/ <deployed-ref>` must report `ok` for every file.
+4. `tools/verify.sh https://…/ <deployed-ref>` must report `ok` for every file.
 
 Changing trusted persons: a person added later cannot read or act on
 conversations that started before. Removing someone from `keys.json` stops

@@ -19,5 +19,9 @@ mv "$tmp/private" "$tmp/public/private"
 mkdir "$tmp/public/private/data"
 git rev-parse --short "$ref" > "$tmp/public/version.txt"
 
-COPYFILE_DISABLE=1 tar czf - -C "$tmp/public" . | ssh "$host" "tar xzf - -C '$root'"
+# List the entries instead of '.', so the webroot keeps its own mode
+cd "$tmp/public"
+COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -czf - $(ls -A) |
+    ssh "$host" "tar xzf - -C '$root' && chmod 700 '$root/private/data'"
+cd - >/dev/null
 echo "deployed $(cat "$tmp/public/version.txt") to $host:$root"

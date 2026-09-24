@@ -205,5 +205,7 @@ become one summary.
 
 ## Reporting a vulnerability
 
-Please write to Max Horn, mhorn@rptu.de, before publishing details. Mention
-whether the issue affects the live site.
+Please report privately before publishing details, either through
+[GitHub's private vulnerability reporting](https://github.com/AGAG-RPTU/Kummerkasten-SFB/security/advisories/new)
+or by email to Max Horn, mhorn@rptu.de. Mention whether the issue affects the
+live site.

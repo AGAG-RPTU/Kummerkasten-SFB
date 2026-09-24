@@ -8,6 +8,16 @@ AddDefaultCharset utf-8
     RewriteEngine On
     RewriteCond %{HTTPS} !=on
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+    # Clean URLs: /write serves write.html. Old .html addresses redirect
+    # there, /index.html to /. Matching THE_REQUEST (what the client asked
+    # for) keeps the internal rewrite below from redirecting in a loop.
+    RewriteCond %{THE_REQUEST} \s/index\.html[\s?]
+    RewriteRule ^index\.html$ / [R=301,L]
+    RewriteCond %{THE_REQUEST} \s/([a-z]+)\.html[\s?]
+    RewriteRule ^([a-z]+)\.html$ /$1 [R=301,L]
+    RewriteCond %{REQUEST_FILENAME}.html -f
+    RewriteRule ^([a-z]+)$ $1.html [L]
 </IfModule>
 
 <IfModule mod_headers.c>

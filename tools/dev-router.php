@@ -21,9 +21,17 @@ foreach ($matches as [, $name, $value]) {
     }
 }
 
+// Clean URLs as in public/.htaccess: /write serves write.html, and .html
+// addresses redirect to it (/index.html to /).
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+if (preg_match('#^/([a-z]+)\.html$#', $path, $m)) {
+    header('Location: /' . ($m[1] === 'index' ? '' : $m[1]), true, 301);
+    return true;
+}
 if ($path === '/') {
     $path = '/index.html';
+} elseif (preg_match('#^/[a-z]+$#', $path) && is_file(__DIR__ . "/../public$path.html")) {
+    $path .= '.html';
 }
 if (str_ends_with($path, '.php')) {
     return false;

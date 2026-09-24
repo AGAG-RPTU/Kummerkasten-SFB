@@ -724,7 +724,7 @@ function notify(PDO $db, array $config, array $staff, array $staffIds, string $s
         $staffIds = array_keys($staff);
     }
 
-    $body = "$subject.\n\nRead it at {$config['site_url']}staff.html\n\n"
+    $body = "$subject.\n\nRead it at {$config['site_url']}staff\n\n"
         . "This notification contains no message content.\n";
 
     $headers = [
@@ -744,7 +744,7 @@ function notify(PDO $db, array $config, array $staff, array $staffIds, string $s
         curl_setopt_array($ch, [
             CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $subject,
-            CURLOPT_HTTPHEADER => ['Title: Kummerkasten', 'Click: ' . $config['site_url'] . 'staff.html'],
+            CURLOPT_HTTPHEADER => ['Title: Kummerkasten', 'Click: ' . $config['site_url'] . 'staff'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 5,
         ]);

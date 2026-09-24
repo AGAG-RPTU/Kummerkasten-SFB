@@ -86,7 +86,7 @@ Steps:
 2. On the host, copy `private/config.example.php` to `private/config.php` and
    fill it in: at least `pow_secret`, and `password_hash` if the SFB access
    password should be required.
-3. Each trusted person opens `setup.html` on the deployed site, on their own
+3. Each trusted person opens `/setup` on the deployed site, on their own
    device, and sends the displayed JSON entry to the maintainer, who adds it
    to `public/keys.json`, runs `npm test` (which checks every entry, including
    the notification address), commits and deploys. Notification addresses
@@ -110,7 +110,7 @@ Spam protection for new conversations: the browser solves a proof-of-work
 challenge in a worker while the sender writes (`pow` in `config.php`; see
 `public/js/pow.js`). The SFB access password is optional on top: set
 `password_hash` (from `php tools/hash-password.php`) to require it, `null` to
-drop it. `write.html#pw=<password>` fills it in; the fragment never reaches
+drop it. `/write#pw=<password>` fills it in; the fragment never reaches
 the server. Changing it does not affect senders who already have a codeword.
 
 Retention: closed conversations are deleted after `closed_days`, all others

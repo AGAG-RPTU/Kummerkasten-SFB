@@ -17,7 +17,7 @@ status=0
 # Everything the browser loads; api.php runs on the server and cannot be fetched
 for path in $(git ls-tree -r --name-only "$ref" public | grep -E '\.(html|js|css|json)$'); do
     file=${path#public/}
-    if ! curl -sf -o "$tmp" "$base$file"; then
+    if ! curl -sfL -o "$tmp" "$base$file"; then     # -L: .html addresses redirect
         echo "MISSING  $file"
         status=1
     elif git show "$ref:$path" | cmp -s - "$tmp"; then

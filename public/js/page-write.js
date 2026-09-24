@@ -137,7 +137,7 @@ $('copy').addEventListener('click', async () => {
 });
 
 $('download').addEventListener('click', () => {
-  const url = new URL('conversation.html', location.href).href;
+  const url = new URL('conversation', location.href).href;
   const blob = new Blob([t('done.file', { codeword, url })], { type: 'text/plain' });
   const a = h('a', { href: URL.createObjectURL(blob), download: 'kummerkasten-codeword.txt' });
   a.click();
@@ -150,7 +150,7 @@ $('saved').addEventListener('change', () => {
 });
 
 $('next').addEventListener('click', () => {
-  location.href = 'conversation.html';
+  location.href = 'conversation';
 });
 
 // The codeword exists only on this page until the sender has saved it.

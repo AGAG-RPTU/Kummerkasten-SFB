@@ -14,6 +14,8 @@ const STRINGS = {
     'footer.source': 'Source code',
     'footer.staff': 'For trusted persons',
     'footer.sfb': 'SFB TRR 195 website',
+    'footer.imprint': 'Imprint',
+    'footer.privacy': 'Privacy',
     'preview': '<strong>This is a preview!</strong> Do not use it for real confidential matters yet. The security review is still pending, and the trusted persons listed are for testing only.',
 
     'index.intro': '<p>Did something happen within the SFB that weighs on you: discrimination, harassment, a conflict, a problem you cannot solve alone? Or do you have a suggestion? Write to the trusted persons here, anonymously or with your name.</p>',
@@ -147,6 +149,8 @@ const STRINGS = {
     'footer.source': 'Quellcode',
     'footer.staff': 'Für Vertrauenspersonen',
     'footer.sfb': 'Website des SFB TRR 195',
+    'footer.imprint': 'Impressum',
+    'footer.privacy': 'Datenschutz',
     'preview': '<strong>Dies ist eine Vorschau!</strong> Bitte noch nicht für echte vertrauliche Anliegen verwenden. Die Sicherheitsprüfung steht noch aus, und die eingetragenen Vertrauenspersonen dienen nur zum Testen.',
 
     'index.intro': '<p>Ist im SFB etwas passiert, das dich belastet: Diskriminierung, Belästigung, ein Konflikt, ein Problem, das du nicht allein lösen kannst? Oder hast du einen Vorschlag? Schreib den Vertrauenspersonen hier, anonym oder mit Namen.</p>',
@@ -327,6 +331,10 @@ export function applyI18n(root = document) {
   }
   for (const el of root.querySelectorAll('[data-i18n-placeholder]')) {
     el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+  // Long texts such as the legal pages come as one block per language.
+  for (const el of root.querySelectorAll('[data-lang]')) {
+    el.hidden = el.dataset.lang !== lang;
   }
 }
 

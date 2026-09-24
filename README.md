@@ -22,25 +22,25 @@ neither its operator nor a stolen database reveals content.
   them on the server shows up in `tools/verify.sh`.
 - Appends are signed by the codeword's key or a trusted person's key; the
   server enforces a gapless sequence per conversation.
-- Plaintext is padded to 512-byte blocks; stored times are rounded to the nearest hour;
-  the application stores no IP addresses.
+- Plaintext is padded to 512-byte blocks, stored times are rounded to the
+  nearest hour, and the application stores no IP addresses.
 
 Codewords share one Argon2 salt, so an attacker with the database tests each
 guess against all conversations at once; 62 bits leave ample margin at the
 expected scale.
 
-Limits, also stated on the info page: whoever controls the server can deliver
-altered JavaScript (detectable with `tools/verify.sh`, not preventable); the
-server can drop messages; no forward secrecy, so a leaked passphrase exposes
-that person's past conversations; web server access logs and host backups are
-outside the application's control.
+Limits (the info page names those that matter to senders): whoever controls
+the server can deliver altered JavaScript (detectable with `tools/verify.sh`,
+not preventable); the server can drop messages; no forward secrecy, so a
+leaked passphrase exposes that person's past conversations; web server access
+logs and host backups are outside the application's control.
 
 ## Layout
 
 ```
 public/     webroot: pages, JS, vendored libsodium, api.php entry point, .htaccess
 private/    app.php, schema.sql, config.php (not in git), data/ (SQLite)
-tests/      node --test: crypto unit tests, API tests against php -S
+tests/      node --test: unit tests, API tests against php -S, keys.json checks
 tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, deploy.sh, verify.sh
 ```
 
@@ -49,7 +49,7 @@ tools/      vendor.sh, dev-env.js, dev-router.php, hash-password.php, deploy.sh,
 Requires Node ≥ 20 and PHP ≥ 8.1 with `sodium` and `pdo_sqlite`.
 
 ```sh
-npm test                      # 37 tests, ~15 s
+npm test                      # ~15 s
 node tools/dev-env.js         # dev config, access password "dev", two dev trusted persons
 KK_CONFIG=$PWD/private/data/dev/config.php \
   php -d "sendmail_path=cat >> $PWD/private/data/dev/mail.log" \
@@ -64,7 +64,8 @@ Content Security Policy is active locally too.
 
 ## Deployment
 
-Host checklist (`gap-www` meets all of these):
+Host checklist (netcup, the current host, meets all of these; on `gap-www`
+`mail()` did not deliver without SMTP credentials):
 
 - PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`).
 - Apache with `.htaccess` support for `mod_headers` and `mod_rewrite`.

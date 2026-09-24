@@ -54,7 +54,7 @@ async function load() {
   }
 }
 
-// A garbage sealed key (anyone with the shared password can send one) must
+// A garbage sealed key (anyone who can start a conversation can send one) must
 // not take down the whole list; such a conversation shows as unreadable.
 function openKey(c) {
   try {

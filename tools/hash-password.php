@@ -1,7 +1,7 @@
 <?php
 // Prints the password_hash value for private/config.php.
 // Usage: php tools/hash-password.php   (reads the password from stdin)
-fwrite(STDERR, "Shared password: ");
+fwrite(STDERR, "SFB access password: ");
 $password = trim((string)fgets(STDIN));
 if ($password === '') {
     fwrite(STDERR, "empty password\n");

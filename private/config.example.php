@@ -5,7 +5,7 @@ return [
     // SQLite file; its directory must be writable by the web server.
     'db' => __DIR__ . '/data/kummerkasten.sqlite',
 
-    // Public keys of the trusted persons (committed to git, see README).
+    // Trusted persons: public keys and notification addresses (in git, see README).
     'keys_file' => __DIR__ . '/../public/keys.json',
 
     // SFB access password for starting a conversation, or null for none
@@ -30,7 +30,8 @@ return [
     // message content.
     'mail_from' => 'kummerkasten@example.org',
 
-    // Optional ntfy topic URL (https://ntfy.sh/<unguessable-topic>), or null.
+    // Optional ntfy topic URL (https://ntfy.sh/<unguessable-topic>) for push
+    // notifications, also without content, or null.
     'ntfy_url' => null,
 
     'retention' => [

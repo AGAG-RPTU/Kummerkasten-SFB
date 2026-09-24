@@ -132,7 +132,7 @@ export function encryptMessage(key, convId, seq, author, content) {
 const MESSAGE_FIELDS = ['body', 'subject', 'category', 'name', 'contact'];
 
 // Throws if the ciphertext was altered or relabelled with another seq/author,
-// or if it does not hold a message: anyone with the shared password can
+// or if it does not hold a message: anyone who can start a conversation can
 // encrypt arbitrary JSON, and the pages must not trip over it.
 export function decryptMessage(key, convId, seq, author, ciphertextB64) {
   const data = fromB64(ciphertextB64);

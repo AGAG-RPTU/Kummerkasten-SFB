@@ -4,8 +4,12 @@
     {
       "name": "kummerkasten-dev",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "KK_CONFIG=$PWD/private/data/dev/config.php exec php -d \"sendmail_path=cat >> $PWD/private/data/dev/mail.log\" -S localhost:8765 -t public tools/dev-router.php"],
-      "port": 8765
+      "runtimeArgs": [
+        "-c",
+        "KK_CONFIG=$PWD/private/data/dev/config.php exec php -d \"sendmail_path=cat >> $PWD/private/data/dev/mail.log\" -S localhost:${PORT:-8765} -t public tools/dev-router.php"
+      ],
+      "port": 8765,
+      "autoPort": true
     }
   ]
 }

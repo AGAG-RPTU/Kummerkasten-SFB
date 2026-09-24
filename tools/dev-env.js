@@ -1,5 +1,5 @@
-// Creates private/data/dev/ with two dev trusted persons and shared password
-// "dev", then prints how to start the local server. Never deploy these keys.
+// Creates private/data/dev/ with two dev trusted persons and SFB access
+// password "dev", then prints how to start the local server. Never deploy these keys.
 //   node tools/dev-env.js
 
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -40,7 +40,7 @@ return [
 `);
 
 console.log(`Dev environment in ${DIR}
-Shared password: ${PASSWORD}
+SFB access password: ${PASSWORD}
 ${STAFF.map((s) => `${s.id}: ${s.passphrase}`).join('\n')}
 
 Start (mail is written to ${DIR}mail.log):

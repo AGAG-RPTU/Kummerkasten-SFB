@@ -1,0 +1,33 @@
+<!-- title: Key setup · Kummerkasten; script: setup -->
+<h1 data-i18n="setup.title"></h1>
+<p data-i18n="setup.intro"></p>
+
+<form id="form" class="card" autocomplete="off">
+  <label for="staff-id" data-i18n="setup.id"></label>
+  <input id="staff-id" type="text" autocapitalize="off" spellcheck="false" required>
+  <label for="staff-name" data-i18n="setup.name"></label>
+  <input id="staff-name" type="text" required>
+  <label for="staff-email" data-i18n="setup.email"></label>
+  <input id="staff-email" type="email" required aria-describedby="staff-email-hint">
+  <p id="staff-email-hint" class="hint" data-i18n="setup.emailHint"></p>
+  <div class="actions"><button id="generate" type="button" class="secondary" data-i18n="setup.generate"></button></div>
+
+  <div id="passphrase-box" hidden>
+    <p data-i18n="setup.passphrase"></p>
+    <p id="passphrase" class="phrase"></p>
+    <p class="hint" data-i18n="words.format"></p>
+    <div class="actions"><button id="copy" type="button" class="secondary" data-i18n="setup.copy"></button></div>
+    <label for="retype" data-i18n="setup.retype"></label>
+    <input id="retype" type="text" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div id="feedback" class="feedback" aria-live="polite"></div>
+    <div class="actions"><button type="submit" data-i18n="setup.create"></button></div>
+  </div>
+  <p id="status" class="status" hidden></p>
+</form>
+
+<section id="result" class="card" hidden>
+  <p data-i18n="setup.result"></p>
+  <pre id="entry" class="output"></pre>
+  <div class="actions"><button id="copy-entry" type="button" class="secondary" data-i18n="setup.copyEntry"></button></div>
+  <p><span data-i18n="setup.fingerprint"></span>: <code id="fingerprint"></code></p>
+</section>

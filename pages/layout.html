@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>{{title}}</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="module" src="js/page-{{script}}.js"></script>
+</head>
+<body>
+<header class="site"><div class="inner">
+  <a class="brand" href="./">
+    <img src="img/trr195-logo.png" alt="SFB TRR 195" width="82" height="40">
+    <span data-i18n="site.short"></span>
+  </a>
+  <nav>
+    <a href="./" data-i18n="nav.home"{{current:index}}></a>
+    <a href="write" data-i18n="nav.write"{{current:write}}></a>
+    <a href="conversation" data-i18n="nav.open"{{current:conversation}}></a>
+    <button id="lang-toggle" class="link" type="button" data-i18n="lang.other"></button>
+  </nav>
+</div></header>
+<main>
+{{content}}</main>
+<footer class="site">
+  <a id="source-link" data-i18n="footer.source"></a>
+  <a id="security-link" data-i18n="footer.security"></a>
+  <a id="version" hidden></a>
+  <a href="https://www.computeralgebra.de/sfb/" data-i18n="footer.sfb"></a>
+  <a href="imprint" data-i18n="footer.imprint"></a>
+  <a href="privacy" data-i18n="footer.privacy"></a>
+  <a href="staff" data-i18n="footer.staff"></a>
+</footer>
+</body>
+</html>

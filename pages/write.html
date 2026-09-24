@@ -1,0 +1,51 @@
+<!-- title: Write · Kummerkasten; script: write -->
+<h1 data-i18n="write.title"></h1>
+
+<form id="form" class="card" autocomplete="off">
+  <div id="password-box" hidden>
+    <label for="password" data-i18n="write.password"></label>
+    <input id="password" type="password" autocomplete="off" aria-describedby="password-hint">
+    <p id="password-hint" class="hint" data-i18n="write.passwordHint"></p>
+  </div>
+
+  <label for="category" data-i18n="write.category"></label>
+  <select id="category">
+    <option value="problem" data-i18n="cat.problem"></option>
+    <option value="feedback" data-i18n="cat.feedback"></option>
+    <option value="question" data-i18n="cat.question"></option>
+    <option value="other" data-i18n="cat.other"></option>
+  </select>
+
+  <label for="subject" data-i18n="write.subject"></label>
+  <input id="subject" type="text" maxlength="200">
+
+  <label for="body" data-i18n="write.body"></label>
+  <textarea id="body" maxlength="20000" required></textarea>
+
+  <fieldset>
+    <legend data-i18n="write.optional"></legend>
+    <p class="hint" data-i18n="write.optionalHint"></p>
+    <label for="name" data-i18n="write.name"></label>
+    <input id="name" type="text" maxlength="200">
+    <label for="contact" data-i18n="write.contact"></label>
+    <input id="contact" type="text" maxlength="200">
+  </fieldset>
+
+  <div class="actions"><button id="send" type="submit" data-i18n="write.send"></button></div>
+  <p id="pow-status" class="hint" aria-live="polite"></p>
+  <p id="status" class="status" hidden></p>
+</form>
+
+<section id="done" class="card" hidden>
+  <h2 data-i18n="done.title"></h2>
+  <p id="codeword" class="phrase"></p>
+  <p id="earlier" class="warn" hidden data-i18n="done.earlier"></p>
+  <p class="hint" data-i18n="words.format"></p>
+  <p class="warn" data-i18n="done.warn"></p>
+  <div class="actions">
+    <button id="copy" type="button" class="secondary" data-i18n="done.copy"></button>
+    <button id="download" type="button" class="secondary" data-i18n="done.download"></button>
+  </div>
+  <label class="check"><input id="saved" type="checkbox"> <span data-i18n="done.confirm"></span></label>
+  <div class="actions"><button id="next" type="button" disabled data-i18n="done.next"></button></div>
+</section>

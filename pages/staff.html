@@ -1,0 +1,22 @@
+<!-- title: Trusted persons · Kummerkasten; script: staff -->
+<h1 data-i18n="staff.title"></h1>
+
+<form id="unlock" class="card" autocomplete="off">
+  <label for="who" data-i18n="staff.who"></label>
+  <select id="who"></select>
+  <label for="passphrase" data-i18n="staff.passphrase"></label>
+  <input id="passphrase" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="current-password">
+  <div id="feedback" class="feedback" aria-live="polite"></div>
+  <div class="actions"><button type="submit" data-i18n="staff.unlock"></button></div>
+  <p id="unlock-status" class="status" hidden></p>
+</form>
+
+<section id="inbox" hidden>
+  <div class="session">
+    <p id="whoami"></p>
+    <button id="refresh" type="button" class="secondary" data-i18n="staff.refresh"></button>
+    <button id="lock" type="button" class="secondary" data-i18n="staff.lock"></button>
+  </div>
+  <p id="inbox-status" class="status" hidden></p>
+  <div id="convs" class="convs"></div>
+</section>

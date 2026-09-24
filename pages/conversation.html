@@ -1,0 +1,27 @@
+<!-- title: Conversation · Kummerkasten; script: conversation -->
+<h1 data-i18n="conv.title"></h1>
+
+<form id="unlock" class="card" autocomplete="off">
+  <label for="codeword" data-i18n="conv.codeword"></label>
+  <input id="codeword" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+  <label class="check"><input id="show-codeword" type="checkbox"> <span data-i18n="conv.show"></span></label>
+  <p class="hint" data-i18n="conv.hint"></p>
+  <div id="feedback" class="feedback" aria-live="polite"></div>
+  <div class="actions"><button type="submit" data-i18n="conv.open"></button></div>
+  <p id="unlock-status" class="status" hidden></p>
+</form>
+
+<section id="conversation" hidden>
+  <div id="thread" class="thread"></div>
+  <p id="thread-note" class="note" hidden></p>
+  <form id="reply" class="card" autocomplete="off">
+    <label for="reply-body" data-i18n="conv.reply"></label>
+    <textarea id="reply-body" maxlength="20000" required></textarea>
+    <div class="actions">
+      <button type="submit" data-i18n="conv.send"></button>
+      <button id="lock" type="button" class="secondary" data-i18n="conv.lock"></button>
+      <button id="delete" type="button" class="danger" data-i18n="conv.delete"></button>
+    </div>
+    <p id="reply-status" class="status" hidden></p>
+  </form>
+</section>

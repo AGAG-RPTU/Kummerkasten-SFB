@@ -5,6 +5,8 @@ import { applyI18n, setGlobals, toggleLang } from './i18n.js';
 // Public repository, linked in the footer so visitors can compare files.
 export const SOURCE_URL = 'https://github.com/AGAG-RPTU/Kummerkasten-SFB';
 const SECURITY_URL = `${SOURCE_URL}/blob/main/SECURITY.md`;
+// Also the logo's link in pages/layout.html.
+const SFB_URL = 'https://www.computeralgebra.de/sfb/';
 
 const COMMIT_PATTERN = /^[0-9a-f]{40}$/;
 const SHORT_COMMIT = 7;
@@ -29,7 +31,7 @@ export function initPage() {
     banner.dataset.i18nHtml = 'preview';
     document.querySelector('main').prepend(banner);
   }
-  setGlobals({ sourceUrl: SOURCE_URL, securityUrl: SECURITY_URL });
+  setGlobals({ sourceUrl: SOURCE_URL, securityUrl: SECURITY_URL, sfbUrl: SFB_URL });
   applyI18n();
   document.getElementById('lang-toggle').addEventListener('click', toggleLang);
 

@@ -1,6 +1,6 @@
-# SFB TRR 195 Kummerkasten
+# SFB-TRR 195 Kummerkasten
 
-A contact form for members of the SFB TRR 195 to reach the trusted persons
+A contact form for members of the SFB-TRR 195 to reach the trusted persons
 (Vertrauenspersonen), anonymously or by name. Senders receive a six-word
 codeword and use it to return, read replies and answer. Live at
 <https://kummerkasten.coxeter.de/>.
@@ -36,10 +36,12 @@ tools/local.py https://kummerkasten.coxeter.de/      # use the site from this ch
 ## Layout
 
 ```
-public/     webroot: pages, js/, css/, img/, vendored libsodium, keys.json, api.php, .htaccess
+pages/      page sources and the shared layout; tools/build-pages.js writes public/*.html
+public/     webroot: built pages, js/, css/, img/, vendored libsodium, keys.json, api.php, .htaccess
 private/    app.php, schema.sql, config.example.php; on the server also config.php and data/
 tests/      node --test: unit tests, API tests against php -S, keys.json checks
-tools/      deploy.sh, verify.sh, local.py, vendor.sh, dev-env.js, dev-router.php, hash-password.php
+tools/      build-pages.js, deploy.sh, verify.sh, local.py, vendor.sh, dev-env.js, dev-router.php,
+            hash-password.php
 ```
 
 ## Development
@@ -54,6 +56,10 @@ KK_CONFIG=$PWD/private/data/dev/config.php \
   php -d "sendmail_path=cat >> $PWD/private/data/dev/mail.log" \
   -S localhost:8765 -t public tools/dev-router.php
 ```
+
+Pages are edited in `pages/` (header and footer once, in `pages/layout.html`)
+and built with `node tools/build-pages.js`; the built `public/*.html` are
+committed, and `npm test` fails if they are stale.
 
 `tools/dev-router.php` applies the headers and clean URLs of
 `public/.htaccess`, so the Content Security Policy is active locally too.
@@ -75,7 +81,7 @@ Host checklist (netcup, the current host, meets all of these; on `gap-www`
   access. Check with `curl -I <site>/private/app.php`, which must give 403.
 - Access logs: ask the host to disable or anonymise IP logging for this site,
   switch off web statistics built from them, and state the log retention in
-  `public/privacy.html`.
+  `pages/privacy.html`.
 
 Steps:
 
@@ -98,8 +104,8 @@ Steps:
 
 Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
 
-- Update the hosting paragraphs in `public/imprint.html` and
-  `public/privacy.html` (marked `TODO(hosting)`): provider, address, log
+- Update the hosting paragraphs in `pages/imprint.html` and
+  `pages/privacy.html` (marked `TODO(hosting)`): provider, address, log
   retention, and whether a processing agreement applies.
 - Switch off web statistics built from access logs, as done in Plesk.
 - `tools/deploy.sh` warns while the legal pages still name netcup.

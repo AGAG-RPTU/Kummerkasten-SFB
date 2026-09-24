@@ -85,6 +85,7 @@ header.site .inner {
   color: var(--accent);
   margin-right: auto;
 }
+.brand a { text-decoration: none; }
 .brand img { display: block; height: 40px; width: auto; }
 header.site nav {
   display: flex;

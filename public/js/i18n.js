@@ -4,9 +4,9 @@
 
 const STRINGS = {
   en: {
-    'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.title': 'SFB-TRR 195 Kummerkasten',
     'site.short': 'Kummerkasten',
-    'site.tagline': 'A confidential line to the trusted persons of the SFB',
+    'site.tagline': 'A confidential line to the trusted persons of the <a href="{sfbUrl}">SFB-TRR 195</a>',
     'nav.home': 'About',
     'nav.write': 'Write',
     'nav.open': 'My conversation',
@@ -14,7 +14,6 @@ const STRINGS = {
     'footer.source': 'Source code',
     'footer.security': 'Security',
     'footer.staff': 'For trusted persons',
-    'footer.sfb': 'SFB TRR 195 website',
     'footer.imprint': 'Imprint',
     'footer.privacy': 'Privacy',
     'preview': '<strong>This is a preview!</strong> Do not use it for real confidential matters yet. The security review is still pending, and the trusted persons listed are for testing only.',
@@ -58,7 +57,7 @@ const STRINGS = {
     'done.download': 'Save as text file',
     'done.confirm': 'I have saved my codeword.',
     'done.next': 'Go to the conversation',
-    'done.file': 'SFB TRR 195 Kummerkasten\n\nCodeword: {codeword}\n\nRead replies at {url}\n',
+    'done.file': 'SFB-TRR 195 Kummerkasten\n\nCodeword: {codeword}\n\nRead replies at {url}\n',
     'done.leave': 'You have not confirmed that you saved your codeword.',
 
     'conv.title': 'Your conversation',
@@ -142,9 +141,9 @@ const STRINGS = {
   },
 
   de: {
-    'site.title': 'SFB TRR 195 Kummerkasten',
+    'site.title': 'SFB-TRR 195 Kummerkasten',
     'site.short': 'Kummerkasten',
-    'site.tagline': 'Ein vertraulicher Draht zu den Vertrauenspersonen des SFB',
+    'site.tagline': 'Ein vertraulicher Draht zu den Vertrauenspersonen des <a href="{sfbUrl}">SFB-TRR 195</a>',
     'nav.home': 'Info',
     'nav.write': 'Schreiben',
     'nav.open': 'Meine Unterhaltung',
@@ -152,7 +151,6 @@ const STRINGS = {
     'footer.source': 'Quellcode',
     'footer.security': 'Sicherheit',
     'footer.staff': 'Für Vertrauenspersonen',
-    'footer.sfb': 'Website des SFB TRR 195',
     'footer.imprint': 'Impressum',
     'footer.privacy': 'Datenschutz',
     'preview': '<strong>Dies ist eine Vorschau!</strong> Bitte noch nicht für echte vertrauliche Anliegen verwenden. Die Sicherheitsprüfung steht noch aus, und die eingetragenen Vertrauenspersonen dienen nur zum Testen.',
@@ -196,7 +194,7 @@ const STRINGS = {
     'done.download': 'Als Textdatei speichern',
     'done.confirm': 'Ich habe mein Codewort gespeichert.',
     'done.next': 'Zur Unterhaltung',
-    'done.file': 'SFB TRR 195 Kummerkasten\n\nCodewort: {codeword}\n\nAntworten lesen unter {url}\n',
+    'done.file': 'SFB-TRR 195 Kummerkasten\n\nCodewort: {codeword}\n\nAntworten lesen unter {url}\n',
     'done.leave': 'Du hast noch nicht bestätigt, dass du dein Codewort gespeichert hast.',
 
     'conv.title': 'Deine Unterhaltung',

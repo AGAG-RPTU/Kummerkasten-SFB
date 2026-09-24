@@ -93,6 +93,14 @@ Steps:
    are public there, like the names.
 4. `tools/verify.sh https://…/ <deployed-ref>` must report `ok` for every file.
 
+Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
+
+- Update the hosting paragraphs in `public/imprint.html` and
+  `public/privacy.html` (marked `TODO(hosting)`): provider, address, log
+  retention, and whether a processing agreement applies.
+- Switch off web statistics built from access logs, as done in Plesk.
+- `tools/deploy.sh` warns while the legal pages still name netcup.
+
 Changing trusted persons: a person added later cannot read or act on
 conversations that started before. Removing someone from `keys.json` stops
 them from listing, replying and closing, but anyone who once held a

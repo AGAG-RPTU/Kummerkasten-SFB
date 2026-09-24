@@ -25,3 +25,14 @@ COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -czf - $(ls -A) |
     ssh "$host" "tar xzf - -C '$root' && chmod 700 '$root/private/data'"
 cd - >/dev/null
 echo "deployed $(cat "$tmp/public/version.txt") to $host:$root"
+
+# netcup is a temporary host; the legal pages must name the real one.
+if [ "$host" != netcup ] && grep -q 'netcup GmbH' public/imprint.html public/privacy.html; then
+    cat >&2 <<'WARN'
+
+  ************************************************************************
+  TODO(hosting): imprint.html and privacy.html still name netcup GmbH as
+  host. Update them for this host (see README, "Moving to another host").
+  ************************************************************************
+WARN
+fi

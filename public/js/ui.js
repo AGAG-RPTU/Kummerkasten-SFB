@@ -49,6 +49,8 @@ export function apiErrorText(err) {
     if (err.status === 429) return t('err.rate');
     if (err.status === 404) return t('err.notFound');
     if (err.status === 409) return t('err.conflict');
+    if (err.status === 413) return t('err.convFull');
+    if (err.status === 507) return t('err.storage');
   }
   return t('err.generic', { msg: err.message });
 }

@@ -9,6 +9,15 @@ export const SOURCE_URL = 'https://github.com/AGAG-RPTU/Kummerkasten-SFB';
 const PREVIEW = true;
 
 export function initPage() {
+  // Pages hold decrypted messages and keys in memory. A page restored from
+  // the back/forward cache would show them to the next person at this
+  // browser, so load it afresh instead.
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      location.reload();
+    }
+  });
+
   if (PREVIEW) {
     const banner = document.createElement('p');
     banner.className = 'preview';

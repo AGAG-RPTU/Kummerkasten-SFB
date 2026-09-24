@@ -1,5 +1,6 @@
 <?php
-// Copy to config.php and fill in. config.php is not in git.
+// Copy to config.php and fill in. config.php is not in git. Settings left
+// out fall back to DEFAULT_CONFIG in app.php.
 
 return [
     // SQLite file; its directory must be writable by the web server.
@@ -16,8 +17,9 @@ return [
     // Proof of work for starting a conversation: count puzzles of `bits` zero
     // bits each, 2^bits * count SHA-256 hashes on average. 17/16 takes about
     // 3 s on a recent laptop, 10 s on a mid-range phone, in the background
-    // while the sender writes. ttl is how long a challenge stays valid (s).
-    'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 7200],
+    // while the sender writes. ttl is how long a challenge stays valid (s);
+    // every `step` new conversations in an hour add one bit.
+    'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 3600, 'step' => 5],
 
     // Random key for signing challenges:
     //   php -r 'echo bin2hex(random_bytes(32)), "\n";'
@@ -40,7 +42,11 @@ return [
     ],
 
     'limits' => [
-        'creates_per_hour' => 30,
+        'creates_per_hour' => 100,              // hard cap; `step` slows floods first
         'messages_per_conversation' => 200,
+        'conversation_bytes' => 1000000,        // ciphertext per conversation
+        'sender_messages_per_hour' => 20,       // per conversation
+        'database_bytes' => 200000000,          // senders are refused beyond this
+        'notifications_per_hour' => 30,         // then one summary mail
     ],
 ];

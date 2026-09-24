@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 const PROTOCOL = 'kk1';
 const SENDER = 'sender';
-const STAFF_ID_PATTERN = '/^(?!sender$)[a-z][a-z0-9_]{0,31}$/';
-const CONV_ID_PATTERN = '/^[0-9a-f]{64}$/';
+// D: '$' must not accept a trailing newline.
+const STAFF_ID_PATTERN = '/^(?!sender$)[a-z][a-z0-9_]{0,31}$/D';
+const CONV_ID_PATTERN = '/^[0-9a-f]{64}$/D';
+const SCHEMA_VERSION = 2;
 
 const HOUR = 3600;
 const DAY = 86400;
@@ -17,7 +19,7 @@ const CLOCK_SKEW = 300;                 // seconds accepted for signed timestamp
 const MAX_REQUEST_BYTES = 262144;
 const MAX_CIPHERTEXT_BYTES = 65536;
 const SEALED_KEY_BYTES = SODIUM_CRYPTO_BOX_SEALBYTES + 32;
-const POW_SALT_PATTERN = '/^[0-9a-f]{32}$/';
+const POW_SALT_PATTERN = '/^[0-9a-f]{32}$/D';
 const PUBLIC_ID_MIN = 100000;
 const PUBLIC_ID_MAX = 999999;
 
@@ -31,6 +33,25 @@ const HTTP_CONFLICT = 409;
 const HTTP_PAYLOAD_TOO_LARGE = 413;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_INTERNAL_ERROR = 500;
+const HTTP_INSUFFICIENT_STORAGE = 507;
+const SQLITE_CONSTRAINT = '23000';
+
+// Used for any setting config.php leaves out, so new settings need no
+// config change. See config.example.php for their meaning.
+const DEFAULT_CONFIG = [
+    'password_hash' => null,
+    'ntfy_url' => null,
+    'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 3600, 'step' => 5],
+    'retention' => ['closed_days' => 30, 'inactive_days' => 365],
+    'limits' => [
+        'creates_per_hour' => 100,
+        'messages_per_conversation' => 200,
+        'conversation_bytes' => 1000000,
+        'sender_messages_per_hour' => 20,
+        'database_bytes' => 200000000,
+        'notifications_per_hour' => 30,
+    ],
+];
 
 final class HttpError extends Exception
 {
@@ -55,19 +76,19 @@ function run(string $privateDir): void
             throw new HttpError('invalid JSON', HTTP_BAD_REQUEST);
         }
 
-        $config = require getenv('KK_CONFIG') ?: $privateDir . '/config.php';
+        $config = array_replace_recursive(DEFAULT_CONFIG, require getenv('KK_CONFIG') ?: $privateDir . '/config.php');
         $db = open_db($config['db'], $privateDir . '/schema.sql');
         expire($db, $config['retention']);
         $staff = load_staff($config['keys_file']);
 
         $result = match ($req['action'] ?? null) {
-            'challenge' => challenge($config),
+            'challenge' => challenge($db, $config),
             'create' => create($db, $req, $config, $staff),
             'get' => get($db, $req),
             'append' => append($db, $req, $config, $staff),
             'delete' => delete($db, $req),
             'staff_list' => staff_list($db, $req, $staff),
-            'staff_close' => staff_close($db, $req, $staff),
+            'staff_close' => staff_close($db, $req, $config, $staff),
             'staff_delete_vote' => staff_delete_vote($db, $req, $staff),
             default => throw new HttpError('unknown action', HTTP_BAD_REQUEST),
         };
@@ -90,24 +111,44 @@ function respond(int $status, array $data): void
 
 // A proof-of-work challenge, plus whether the SFB access password is
 // switched on (password_hash set in the config).
-function challenge(array $config): array
+function challenge(PDO $db, array $config): array
 {
     $pow = $config['pow'];
+    $bits = required_bits($db, $config);
     $salt = bin2hex(random_bytes(16));
     $expires = time() + $pow['ttl'];
     return [
         'salt' => $salt,
-        'bits' => $pow['bits'],
+        'bits' => $bits,
         'count' => $pow['count'],
         'expires' => $expires,
-        'signature' => pow_signature($config, $salt, $pow['bits'], $pow['count'], $expires),
+        'signature' => pow_signature($config, $salt, $bits, $pow['count'], $expires),
         'password_required' => !empty($config['password_hash']),
     ];
 }
 
+// Each `step` new conversations this hour double the work for the next one,
+// so a flood slows itself down instead of locking everyone out at once.
+function required_bits(PDO $db, array $config): int
+{
+    return $config['pow']['bits'] + intdiv(counter($db, 'create'), $config['pow']['step']);
+}
+
+// Senders cannot write once the database reaches its size limit; trusted
+// persons still can, so they can answer and delete.
+function require_storage(PDO $db, array $config): void
+{
+    $size = (int)$db->query('PRAGMA page_count')->fetchColumn() * (int)$db->query('PRAGMA page_size')->fetchColumn();
+    if ($size >= $config['limits']['database_bytes']) {
+        throw new HttpError('storage full, try again later', HTTP_INSUFFICIENT_STORAGE);
+    }
+}
+
 function create(PDO $db, array $req, array $config, array $staff): array
 {
-    // Checked first, so every password guess costs a solved challenge too.
+    require_storage($db, $config);
+
+    // Checked before the password, so every guess costs a solved challenge too.
     verify_pow($db, $req['pow'] ?? null, $config);
 
     // No lockout after wrong passwords: a global one would let anyone block
@@ -116,17 +157,13 @@ function create(PDO $db, array $req, array $config, array $staff): array
         && !password_verify(trim((string)($req['password'] ?? '')), $config['password_hash'])) {
         throw new HttpError('wrong password', HTTP_UNAUTHORIZED);
     }
-    if (counter($db, 'create') >= $config['limits']['creates_per_hour']) {
-        throw new HttpError('too many new conversations, try again later', HTTP_TOO_MANY_REQUESTS);
-    }
-
     $convId = conv_id_field($req);
     $signPk = b64_field($req, 'sender_sign_pk', SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES);
     $ciphertext = ciphertext_field($req);
     verify(append_statement($convId, 1, SENDER, $ciphertext), b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES), $signPk);
 
-    // Every trusted person must be able to read, otherwise a tampered client
-    // could quietly exclude one of them.
+    // A key for every trusted person, so a tampered client cannot leave one
+    // out. Whether each key really opens is only checkable by its recipient.
     $sealed = $req['sealed_keys'] ?? null;
     if (!is_array($sealed) || array_diff_key($staff, $sealed) || array_diff_key($sealed, $staff)) {
         throw new HttpError('sealed_keys must cover exactly the staff in keys.json', HTTP_BAD_REQUEST);
@@ -138,6 +175,9 @@ function create(PDO $db, array $req, array $config, array $staff): array
     $now = now_hour();
     $db->exec('BEGIN IMMEDIATE');
     try {
+        if (counter($db, 'create') >= $config['limits']['creates_per_hour']) {
+            throw new HttpError('too many new conversations, try again later', HTTP_TOO_MANY_REQUESTS);
+        }
         if (find_conversation($db, $convId)) {
             throw new HttpError('conversation exists', HTTP_CONFLICT);
         }
@@ -156,7 +196,7 @@ function create(PDO $db, array $req, array $config, array $staff): array
         throw $e;
     }
 
-    notify($config, $staff, array_keys($staff), "New conversation #$publicId");
+    notify($db, $config, $staff, array_keys($staff), "New conversation #$publicId");
     return ['public_id' => $publicId];
 }
 
@@ -185,7 +225,9 @@ function append(PDO $db, array $req, array $config, array $staff): array
     $signature = b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES);
 
     $conv = find_conversation($db, $convId) ?? throw new HttpError('not found', HTTP_NOT_FOUND);
-    if ($author !== SENDER) {
+    if ($author === SENDER) {
+        require_storage($db, $config);
+    } else {
         require_recipient($db, $convId, $author);
     }
     $signPk = $author === SENDER ? unb64($conv['sender_sign_pk']) : $staff[$author]['sign'];
@@ -199,9 +241,7 @@ function append(PDO $db, array $req, array $config, array $staff): array
         if ($seq !== $last + 1) {
             throw new HttpError('conversation changed, reload', HTTP_CONFLICT);
         }
-        if ($last >= $config['limits']['messages_per_conversation']) {
-            throw new HttpError('conversation is full; please start a new one', HTTP_FORBIDDEN);
-        }
+        check_append_limits($db, $config['limits'], $convId, $last, $author, strlen($ciphertext));
         insert_message($db, $convId, $seq, $author, $ciphertext, now_hour());
 
         // Nobody should delete a message they have not seen.
@@ -209,10 +249,11 @@ function append(PDO $db, array $req, array $config, array $staff): array
 
         // Sender messages notify at most once per hour, so a flood of appends
         // cannot flood mailboxes; a staff reply re-arms the notification.
-        $notify = $author !== SENDER || $conv['notified_at'] === null || $conv['notified_at'] < now_hour();
+        $notifiedAt = query($db, 'SELECT notified_at FROM conversations WHERE conv_id = ?', [$convId])->fetchColumn();
+        $notify = $author !== SENDER || $notifiedAt === null || $notifiedAt < now_hour();
         query($db, "UPDATE conversations SET updated_at = ?, status = 'open', notified_at = ? WHERE conv_id = ?", [
             now_hour(),
-            $author === SENDER ? ($notify ? now_hour() : $conv['notified_at']) : null,
+            $author === SENDER ? ($notify ? now_hour() : $notifiedAt) : null,
             $convId,
         ]);
         $db->exec('COMMIT');
@@ -224,9 +265,31 @@ function append(PDO $db, array $req, array $config, array $staff): array
     if ($notify) {
         $others = array_values(array_diff(array_keys($staff), [$author]));
         $what = $author === SENDER ? 'New message' : 'New reply by a colleague';
-        notify($config, $staff, $others, "$what in conversation #{$conv['public_id']}");
+        notify($db, $config, $staff, $others, "$what in conversation #{$conv['public_id']}");
     }
     return ['seq' => $seq];
+}
+
+// Bounds what one conversation can cost: messages, bytes, and sender
+// messages per hour, the last so a sender cannot flood without new work.
+function check_append_limits(PDO $db, array $limits, string $convId, int $last, string $author, int $bytes): void
+{
+    if ($last >= $limits['messages_per_conversation']) {
+        throw new HttpError('conversation is full; please start a new one', HTTP_FORBIDDEN);
+    }
+    // Stored as base64: 4 characters per 3 bytes.
+    $stored = (int)query($db, 'SELECT SUM(LENGTH(ciphertext)) FROM messages WHERE conv_id = ?', [$convId])->fetchColumn();
+    if (intdiv($stored * 3, 4) + $bytes > $limits['conversation_bytes']) {
+        throw new HttpError('conversation is full; please start a new one', HTTP_PAYLOAD_TOO_LARGE);
+    }
+    if ($author !== SENDER) {
+        return;
+    }
+    $recent = (int)query($db, 'SELECT COUNT(*) FROM messages WHERE conv_id = ? AND author = ? AND created_at = ?',
+        [$convId, SENDER, now_hour()])->fetchColumn();
+    if ($recent >= $limits['sender_messages_per_hour']) {
+        throw new HttpError('too many messages, try again later', HTTP_TOO_MANY_REQUESTS);
+    }
 }
 
 function delete(PDO $db, array $req): array
@@ -251,8 +314,13 @@ function staff_list(PDO $db, array $req, array $staff): array
     $rows = query($db, 'SELECT c.conv_id, c.public_id, c.status, c.created_at, c.updated_at, k.sealed_key
                         FROM conversations c JOIN recipient_keys k ON k.conv_id = c.conv_id AND k.staff_id = ?
                         ORDER BY c.updated_at DESC, c.public_id', [$staffId])->fetchAll();
+    // Metadata only; staff fetch a conversation's messages with 'get'. One
+    // response holding everything would grow without bound.
     foreach ($rows as &$row) {
-        $row['messages'] = messages($db, $row['conv_id']);
+        $last = query($db, 'SELECT seq, author FROM messages WHERE conv_id = ? ORDER BY seq DESC LIMIT 1',
+            [$row['conv_id']])->fetch();
+        $row['last_seq'] = $last['seq'];
+        $row['last_author'] = $last['author'];
         $row['delete_voters'] = delete_voters($db, $row['conv_id'], $staff);
         $row['delete_votes'] = query($db, 'SELECT staff_id FROM delete_votes WHERE conv_id = ? ORDER BY staff_id',
             [$row['conv_id']])->fetchAll(PDO::FETCH_COLUMN);
@@ -260,7 +328,7 @@ function staff_list(PDO $db, array $req, array $staff): array
     return ['conversations' => $rows];
 }
 
-function staff_close(PDO $db, array $req, array $staff): array
+function staff_close(PDO $db, array $req, array $config, array $staff): array
 {
     $staffId = staff_field($req, $staff);
     $timestamp = timestamp_field($req);
@@ -289,6 +357,10 @@ function staff_close(PDO $db, array $req, array $staff): array
         $db->exec('ROLLBACK');
         throw $e;
     }
+
+    // One person can shorten the retention, so the others should know.
+    $others = array_values(array_diff(array_keys($staff), [$staffId]));
+    notify($db, $config, $staff, $others, "Conversation #$publicId marked as resolved");
     return [];
 }
 
@@ -408,7 +480,7 @@ function verify_pow(PDO $db, mixed $pow, array $config): void
 
     // Signed by us, not expired, and at least as hard as currently configured.
     if (!hash_equals(pow_signature($config, $salt, $bits, $count, $expires), $pow['signature'])
-        || $bits < $config['pow']['bits'] || $count < $config['pow']['count']) {
+        || $bits < required_bits($db, $config) || $count < $config['pow']['count']) {
         throw new HttpError('invalid proof of work', HTTP_FORBIDDEN);
     }
     if ($expires < time()) {
@@ -423,10 +495,15 @@ function verify_pow(PDO $db, mixed $pow, array $config): void
         }
     }
 
-    // Each challenge counts once. Rows expire with the challenge.
+    // Each challenge counts once. The row is kept until the hour after expiry;
+    // an exact time would reveal when the sender opened the page.
     try {
-        query($db, 'INSERT INTO used_challenges (salt, expires) VALUES (?, ?)', [$salt, $expires]);
-    } catch (PDOException) {
+        query($db, 'INSERT INTO used_challenges (salt, expires) VALUES (?, ?)',
+            [$salt, intdiv($expires + HOUR - 1, HOUR) * HOUR]);
+    } catch (PDOException $e) {
+        if ($e->getCode() !== SQLITE_CONSTRAINT) {
+            throw $e;
+        }
         throw new HttpError('proof of work already used', HTTP_FORBIDDEN);
     }
 }
@@ -504,9 +581,52 @@ function open_db(string $file, string $schemaFile): PDO
     $db->exec('PRAGMA foreign_keys = ON');
     $db->exec('PRAGMA secure_delete = ON');     // overwrite deleted content in the file
     $db->exec('PRAGMA busy_timeout = 5000');
-    // Idempotent, so tables added later appear in existing databases.
-    $db->exec((string)file_get_contents($schemaFile));
+    migrate($db, (string)file_get_contents($schemaFile));
     return $db;
+}
+
+// The schema is idempotent, so tables added later appear in existing
+// databases. PRAGMA user_version marks changes that need more than that.
+function migrate(PDO $db, string $schema): void
+{
+    $version = (int)$db->query('PRAGMA user_version')->fetchColumn();
+    $tables = $db->query("SELECT name FROM sqlite_master WHERE type = 'table'")->fetchAll(PDO::FETCH_COLUMN);
+    if ($version < 2 && $tables) {
+        rebuild_tables($db, $tables, $schema);
+    }
+    $db->exec($schema);
+    if ($version < SCHEMA_VERSION) {
+        $db->exec('PRAGMA user_version = ' . SCHEMA_VERSION);
+    }
+}
+
+// Version 2: tables WITHOUT ROWID, so storage order follows the random keys
+// instead of revealing which row was inserted when.
+function rebuild_tables(PDO $db, array $tables, string $schema): void
+{
+    $db->exec('PRAGMA foreign_keys = OFF');
+    $db->exec('PRAGMA legacy_alter_table = ON');     // keep references pointing at the new tables
+    $db->exec('BEGIN IMMEDIATE');
+    try {
+        $db->exec('DROP INDEX IF EXISTS conversations_updated_at');
+        foreach ($tables as $table) {
+            $db->exec("ALTER TABLE \"$table\" RENAME TO \"{$table}_v1\"");
+        }
+        $db->exec($schema);
+        foreach ($tables as $table) {
+            $columns = implode(', ', array_map(fn($c) => "\"$c\"",
+                $db->query("SELECT name FROM pragma_table_info('{$table}_v1')")->fetchAll(PDO::FETCH_COLUMN)));
+            $db->exec("INSERT INTO \"$table\" ($columns) SELECT $columns FROM \"{$table}_v1\"");
+            $db->exec("DROP TABLE \"{$table}_v1\"");
+        }
+        $db->exec('COMMIT');
+    } catch (Throwable $e) {
+        $db->exec('ROLLBACK');
+        throw $e;
+    } finally {
+        $db->exec('PRAGMA legacy_alter_table = OFF');
+        $db->exec('PRAGMA foreign_keys = ON');
+    }
 }
 
 function query(PDO $db, string $sql, array $params = []): PDOStatement
@@ -590,8 +710,20 @@ function unb64(string $text): string
 
 // Best effort: a failed notification must not fail the request, and staff see
 // new messages on the staff page anyway. Never put message content here.
-function notify(array $config, array $staff, array $staffIds, string $subject): void
+function notify(PDO $db, array $config, array $staff, array $staffIds, string $subject): void
 {
+    // Past the hourly budget, one summary to everyone instead of a flood.
+    count_up($db, 'notify');
+    $sent = counter($db, 'notify');
+    $budget = $config['limits']['notifications_per_hour'];
+    if ($sent > $budget + 1) {
+        return;
+    }
+    if ($sent === $budget + 1) {
+        $subject = 'Many new messages this hour';
+        $staffIds = array_keys($staff);
+    }
+
     $body = "$subject.\n\nRead it at {$config['site_url']}staff.html\n\n"
         . "This notification contains no message content.\n";
 

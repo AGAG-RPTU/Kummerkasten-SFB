@@ -81,8 +81,8 @@ Steps:
 
 1. `tools/deploy.sh <ssh-host> <webroot>` copies the committed `HEAD`:
    `public/` to the webroot, `private/` to `<webroot>/private`, and writes
-   `version.txt`, which the footer shows. It leaves `config.php` and the
-   database alone.
+   `version.txt`, which the footer shows. It removes files git no longer has
+   and leaves `config.php` and the database alone.
 2. On the host, copy `private/config.example.php` to `private/config.php` and
    fill it in: at least `pow_secret`, and `password_hash` if the SFB access
    password should be required.
@@ -119,7 +119,11 @@ conversation at any time. Trusted persons delete only unanimously: each votes,
 the last missing vote deletes, and any new message clears the votes. Only
 people in `keys.json` who hold the conversation's key count.
 
-Abuse limits (`limits` in `config.php`): new conversations per hour
-site-wide, messages per conversation. Sender messages notify at most once per
-hour per conversation until a trusted person replies. Wrong passwords never
-lock anyone out.
+Abuse limits (`limits` and `pow` in `config.php`, defaults in `app.php`):
+every `step` new conversations in an hour make the proof of work twice as
+hard, with a hard cap behind it; per conversation, a maximum number of
+messages, of bytes, and of sender messages per hour; senders are refused once
+the database reaches `database_bytes`, trusted persons are not. Sender
+messages notify at most once per hour per conversation until a trusted person
+replies, and past `notifications_per_hour` one summary mail replaces the
+rest. Wrong passwords never lock anyone out.

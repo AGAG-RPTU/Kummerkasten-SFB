@@ -1,10 +1,10 @@
-// Sends the first message of a conversation so that a lost response can
-// never start a second one. The codeword is fixed per draft, not per
-// attempt; after a failed attempt, the next one first asks whether the
-// earlier one arrived after all.
+// Sends messages so that a lost response never duplicates one. For a new
+// conversation the codeword is fixed per draft, not per attempt, and a retry
+// first asks whether the earlier attempt arrived; replies likewise check
+// before reporting a failure.
 
 import * as kk from './crypto.js';
-import { ApiError } from './api.js';
+import { ApiError, isNetworkError } from './api.js';
 
 export function createDraft() {
   const words = kk.generateWords(kk.CODEWORD_WORDS);
@@ -61,4 +61,35 @@ export async function sendDraft(draft, { content, staff, password, pow }, call) 
     throw err;
   }
   return { earlier: null };
+}
+
+// Sends a reply as message lastSeq + 1. After a lost response or a conflict,
+// checks whether that message is already this reply, so a retry never posts
+// it twice. Throws if the reply did not arrive.
+export async function sendReply({ convId, key, author, signKeys, body, lastSeq }, call) {
+  const seq = lastSeq + 1;
+  const ciphertext = kk.encryptMessage(key, convId, seq, author, { body });
+  try {
+    await call('append', {
+      conv_id: convId, seq, author, ciphertext,
+      signature: kk.sign(kk.appendStatement(convId, seq, author, ciphertext), signKeys),
+    });
+    return;
+  } catch (err) {
+    if (!isNetworkError(err) && !(err instanceof ApiError && err.status === 409)) {
+      throw err;
+    }
+    const stored = (await call('get', { conv_id: convId })).messages.find((m) => m.seq === seq);
+    if (!stored || stored.author !== author || !sameBody(key, convId, stored, body)) {
+      throw err;
+    }
+  }
+}
+
+function sameBody(key, convId, message, body) {
+  try {
+    return kk.decryptMessage(key, convId, message.seq, message.author, message.ciphertext).body === body;
+  } catch {
+    return false;
+  }
 }

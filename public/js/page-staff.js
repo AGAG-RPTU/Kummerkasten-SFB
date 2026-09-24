@@ -2,6 +2,7 @@ import { initPage } from './site.js';
 import { t, formatTime, onLanguageChange } from './i18n.js';
 import * as kk from './crypto.js';
 import { call, loadStaff, now, ApiError } from './api.js';
+import { sendReply } from './send.js';
 import { $, h, status, nextPaint, apiErrorText, attachWordFeedback, messageView } from './ui.js';
 
 initPage();
@@ -9,8 +10,12 @@ const refreshFeedback = attachWordFeedback($('passphrase'), $('feedback'), kk.PA
 
 let staff = [];
 let me = null;          // { id, name, keys }, in memory only
-let convs = [];         // staff_list result with opened keys
+let convs = [];         // staff_list result with opened keys and fetched messages
 const expanded = new Set();
+const drafts = new Map();   // public_id -> unsent reply, kept across reloads
+
+// Parallel 'get' requests while loading the list.
+const FETCH_BATCH = 4;
 
 await kk.ready;
 staff = await loadStaff();
@@ -46,11 +51,24 @@ async function load() {
       staff_id: me.id, timestamp,
       signature: kk.sign(kk.staffListStatement(me.id, timestamp), me.keys.sign),
     });
-    convs = data.conversations.map((c) => ({ ...c, key: openKey(c) }));
+    convs = data.conversations.map((c) => ({ ...c, key: openKey(c), messages: [] }));
+    for (let i = 0; i < convs.length; i += FETCH_BATCH) {
+      await Promise.all(convs.slice(i, i + FETCH_BATCH).map(fetchMessages));
+    }
     status($('inbox-status'), '');
     render();
   } catch (err) {
     status($('inbox-status'), 'error', apiErrorText(err));
+  }
+}
+
+// The list carries metadata only; messages come per conversation. A failed
+// fetch leaves that conversation empty rather than failing the whole list.
+async function fetchMessages(c) {
+  try {
+    c.messages = (await call('get', { conv_id: c.conv_id })).messages;
+  } catch {
+    c.messages = [];
   }
 }
 
@@ -92,8 +110,8 @@ function render() {
 
 function renderConversation(c) {
   const contents = c.messages.map((m) => decrypt(c, m));
-  const first = contents[0];
-  const awaiting = c.messages.at(-1).author === 'sender';
+  const first = contents[0] ?? { body: t('err.decrypt') };
+  const awaiting = c.last_author === 'sender';
   const badge = c.status === 'closed'
     ? h('span', { class: 'badge' }, t('staff.closed'))
     : h('span', { class: `badge ${awaiting ? 'awaiting' : ''}` }, t(awaiting ? 'staff.awaiting' : 'staff.open'));
@@ -123,12 +141,18 @@ function renderConversation(c) {
     }))
     : null;
 
-  const replyBody = c.key ? h('textarea', { maxlength: '20000', required: '', 'aria-label': t('conv.reply') }) : null;
+  const replyBody = c.key && c.messages.length ? h('textarea', {
+    maxlength: '20000', required: '', 'aria-label': t('conv.reply'),
+    oninput: (e) => drafts.set(c.public_id, e.target.value),
+  }) : null;
+  if (replyBody) {
+    replyBody.value = drafts.get(c.public_id) ?? '';
+  }
   const replyStatus = h('p', { class: 'status', hidden: '' });
-  const form = h('form', { class: 'card', onsubmit: (e) => reply(e, c, replyBody, replyStatus) },
+  const form = h('form', { class: 'card', autocomplete: 'off', onsubmit: (e) => reply(e, c, replyBody, replyStatus) },
     replyBody,
     h('div', { class: 'actions' },
-      c.key ? h('button', { type: 'submit' }, t('conv.send')) : null,
+      replyBody ? h('button', { type: 'submit' }, t('conv.send')) : null,
       c.status === 'closed' ? null
         : h('button', { type: 'button', class: 'secondary', onclick: () => close(c, replyStatus) }, t('staff.close')),
       h('button', { type: 'button', class: 'danger', onclick: () => voteDelete(c, !voted, replyStatus) },
@@ -161,14 +185,12 @@ async function reply(event, c, textarea, replyStatus) {
   if (!body) {
     return;
   }
-  const seq = c.messages.at(-1).seq + 1;
-  const ciphertext = kk.encryptMessage(c.key, c.conv_id, seq, me.id, { body });
   status(replyStatus, 'info', t('status.sending'));
   try {
-    await call('append', {
-      conv_id: c.conv_id, seq, author: me.id, ciphertext,
-      signature: kk.sign(kk.appendStatement(c.conv_id, seq, me.id, ciphertext), me.keys.sign),
-    });
+    await sendReply({
+      convId: c.conv_id, key: c.key, author: me.id, signKeys: me.keys.sign, body, lastSeq: c.messages.at(-1).seq,
+    }, call);
+    drafts.delete(c.public_id);
     await load();
   } catch (err) {
     if (err instanceof ApiError && err.status === 409) {
@@ -223,6 +245,7 @@ $('lock').addEventListener('click', () => {
   me = null;
   convs = [];
   expanded.clear();
+  drafts.clear();
   $('convs').replaceChildren();
   $('inbox').hidden = true;
   $('unlock').hidden = false;

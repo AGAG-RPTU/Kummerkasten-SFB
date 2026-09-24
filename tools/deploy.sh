@@ -24,6 +24,19 @@ cd "$tmp/public"
 COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -czf - $(ls -A) |
     ssh "$host" "tar xzf - -C '$root' && chmod 700 '$root/private/data'"
 cd - >/dev/null
+
+# Remove what earlier deploys left behind and git no longer has, so the site
+# is exactly this revision. config.php, the database and Let's Encrypt
+# challenges stay. Deployed file names contain no spaces.
+(cd "$tmp/public" && find . -type f | sed 's|^\./||') | LC_ALL=C sort > "$tmp/deployed.txt"
+ssh "$host" "cd '$root' && find . -type f ! -path ./private/config.php ! -path './private/data/*' ! -path './.well-known/*'" |
+    sed 's|^\./||' | LC_ALL=C sort | LC_ALL=C comm -23 - "$tmp/deployed.txt" > "$tmp/stale.txt"
+if [ -s "$tmp/stale.txt" ]; then
+    echo "removing files not in $ref:"
+    sed 's/^/  /' "$tmp/stale.txt"
+    ssh "$host" "cd '$root' && xargs rm -f --" < "$tmp/stale.txt"
+fi
+
 echo "deployed $(cat "$tmp/public/version.txt") to $host:$root"
 
 # netcup is a temporary host; the legal pages must name the real one.

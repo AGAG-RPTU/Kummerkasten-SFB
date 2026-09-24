@@ -4,8 +4,8 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as kk from '../public/js/crypto.js';
-import { ApiError } from '../public/js/api.js';
-import { createDraft, sendDraft } from '../public/js/send.js';
+import { ApiError, NetworkError, isNetworkError } from '../public/js/api.js';
+import { createDraft, sendDraft, sendReply } from '../public/js/send.js';
 
 let staff;
 
@@ -34,7 +34,7 @@ function fakeServer({ loseResponses = 0 } = {}) {
         conversations.set(body.conv_id, {
           messages: [{ seq: 1, author: 'sender', ciphertext: body.ciphertext }],
         });
-        if (loseResponses-- > 0) throw new TypeError('Failed to fetch');
+        if (loseResponses-- > 0) throw new NetworkError('Failed to fetch');
         return { public_id: 123456 };
       }
       throw new Error(`unexpected ${action}`);
@@ -76,4 +76,47 @@ test('a retry after a failure that stored nothing sends normally', async () => {
   const result = await sendDraft(draft, { content, staff, pow }, server.call);
   assert.equal(server.conversations.size, 1);
   assert.equal(result.earlier, null);
+});
+
+// A conversation with one message, served by a fake that loses the first
+// append response but stores the message.
+async function replyServer({ loseResponses = 0 } = {}) {
+  const server = fakeServer();
+  const draft = createDraft();
+  await sendDraft(draft, { content, staff, pow }, server.call);
+  const conv = server.conversations.get(draft.sender.convId);
+  const inner = server.call;
+  server.appends = 0;
+  server.call = async (action, body) => {
+    if (action !== 'append') return inner(action, body);
+    server.appends++;
+    if (body.seq !== conv.messages.length + 1) throw new ApiError(409, 'conversation changed, reload');
+    conv.messages.push({ seq: body.seq, author: body.author, ciphertext: body.ciphertext });
+    if (loseResponses-- > 0) throw new NetworkError('Failed to fetch');
+    return { seq: body.seq };
+  };
+  return { server, conv, sender: draft.sender };
+}
+
+test('a reply whose response was lost is recognised on retry, not sent twice', async () => {
+  const { server, conv, sender } = await replyServer({ loseResponses: 1 });
+  const reply = { convId: sender.convId, key: sender.key, author: 'sender', signKeys: sender.sign, body: 'again' };
+  await sendReply({ ...reply, lastSeq: 1 }, server.call);
+  assert.equal(conv.messages.length, 2);
+
+  // The page still thinks the last message is seq 1 and tries again.
+  await sendReply({ ...reply, lastSeq: 1 }, server.call);
+  assert.equal(conv.messages.length, 2);
+});
+
+test('a reply that conflicts with someone else\'s message is reported', async () => {
+  const { server, conv, sender } = await replyServer();
+  conv.messages.push({ seq: 2, author: 'hannah', ciphertext: 'x' });
+  const reply = { convId: sender.convId, key: sender.key, author: 'sender', signKeys: sender.sign, body: 'mine' };
+  await assert.rejects(sendReply({ ...reply, lastSeq: 1 }, server.call), (err) => err.status === 409);
+});
+
+test('only failed requests count as network errors', () => {
+  assert.ok(isNetworkError(new NetworkError('x')));
+  assert.ok(!isNetworkError(new TypeError('x is not a function')));
 });

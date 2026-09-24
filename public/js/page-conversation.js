@@ -2,6 +2,7 @@ import { initPage } from './site.js';
 import { t, formatTime, onLanguageChange } from './i18n.js';
 import * as kk from './crypto.js';
 import { call, loadStaff, now, ApiError } from './api.js';
+import { sendReply } from './send.js';
 import { $, status, nextPaint, apiErrorText, attachWordFeedback, messageView } from './ui.js';
 
 initPage();
@@ -80,14 +81,12 @@ $('reply').addEventListener('submit', async (event) => {
   if (!body) {
     return;
   }
-  const seq = conv.messages.at(-1).seq + 1;
-  const ciphertext = kk.encryptMessage(sender.key, sender.convId, seq, 'sender', { body });
   status($('reply-status'), 'info', t('status.sending'));
   try {
-    await call('append', {
-      conv_id: sender.convId, seq, author: 'sender', ciphertext,
-      signature: kk.sign(kk.appendStatement(sender.convId, seq, 'sender', ciphertext), sender.sign),
-    });
+    await sendReply({
+      convId: sender.convId, key: sender.key, author: 'sender', signKeys: sender.sign, body,
+      lastSeq: conv.messages.at(-1).seq,
+    }, call);
     $('reply-body').value = '';
     status($('reply-status'), '');
     await load();

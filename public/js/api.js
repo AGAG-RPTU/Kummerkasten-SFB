@@ -7,16 +7,24 @@ export class ApiError extends Error {
   }
 }
 
+// No response at all: offline, dropped connection or timeout.
+export class NetworkError extends Error {}
+
 // Better an error to retry than a request that hangs on a flaky connection.
 const TIMEOUT_MS = 30000;
 
 export async function call(action, body = {}) {
-  const res = await fetch('api.php', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action, ...body }),
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
+  let res;
+  try {
+    res = await fetch('api.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...body }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (err) {
+    throw new NetworkError(err.message);
+  }
   let data;
   try {
     data = await res.json();
@@ -29,15 +37,14 @@ export async function call(action, body = {}) {
   return data;
 }
 
-// [{ id, name, box, sign }]
+// [{ id, name, email, box, sign }]
 export async function loadStaff() {
-  const res = await fetch('keys.json', { cache: 'no-cache' });
+  const res = await fetch('keys.json', { cache: 'no-store' });
   return (await res.json()).staff;
 }
 
-// No response at all: offline, dropped connection or timeout.
 export function isNetworkError(err) {
-  return err instanceof TypeError || err?.name === 'TimeoutError';
+  return err instanceof NetworkError;
 }
 
 export function now() {

@@ -60,6 +60,7 @@ $('form').addEventListener('submit', async (event) => {
   $('fingerprint').textContent = kk.fingerprint(entry.box);
   $('passphrase-box').hidden = true;
   $('passphrase').textContent = '';
+  $('retype').value = '';
   $('result').hidden = false;
   passphrase = null;
 });

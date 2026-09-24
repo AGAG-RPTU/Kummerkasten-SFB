@@ -141,7 +141,7 @@ $('download').addEventListener('click', () => {
   const blob = new Blob([t('done.file', { codeword, url })], { type: 'text/plain' });
   const a = h('a', { href: URL.createObjectURL(blob), download: 'kummerkasten-codeword.txt' });
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);     // some browsers read it after click()
 });
 
 $('saved').addEventListener('change', () => {

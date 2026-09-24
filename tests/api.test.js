@@ -73,19 +73,43 @@ function appendRequest(convId, key, seq, author, signKeys, content = { body: 'mo
 
 let passwordHash;
 
-function writeConfig({ password = true } = {}) {
+// Defaults keep the limits out of the way; tests that probe a limit override it.
+const LIMITS = {
+  creates_per_hour: 100,
+  messages_per_conversation: MESSAGE_LIMIT,
+  conversation_bytes: 1000000,
+  sender_messages_per_hour: 100,
+  database_bytes: 1000000000,
+  notifications_per_hour: 1000,
+};
+
+function phpArray(obj) {
+  return `[${Object.entries(obj).map(([k, v]) => `'${k}' => ${v}`).join(', ')}]`;
+}
+
+function writeConfig({ password = true, limits = {}, pow = {} } = {}) {
   writeFileSync(join(dir, 'config.php'), `<?php return [
     'db' => '${dir}/db.sqlite',
     'keys_file' => '${dir}/keys.json',
     'password_hash' => ${password ? `'${passwordHash}'` : 'null'},
-    'pow' => ['bits' => ${POW.bits}, 'count' => ${POW.count}, 'ttl' => ${POW.ttl}],
+    'pow' => ${phpArray({ ...POW, step: 1000, ...pow })},
     'pow_secret' => '${POW_SECRET}',
     'site_url' => 'https://example.org/kk/',
     'mail_from' => 'kk@example.org',
     'ntfy_url' => null,
     'retention' => ['closed_days' => 30, 'inactive_days' => 365],
-    'limits' => ['creates_per_hour' => 100, 'messages_per_conversation' => ${MESSAGE_LIMIT}],
+    'limits' => ${phpArray({ ...LIMITS, ...limits })},
   ];`);
+}
+
+// Runs a query on the test database through PHP (no sqlite3 CLI needed).
+function dbQuery(sql) {
+  return JSON.parse(execFileSync('php', ['-r',
+    `echo json_encode((new PDO('sqlite:${dir}/db.sqlite'))->query($argv[1])->fetchAll(PDO::FETCH_ASSOC));`, sql]).toString());
+}
+
+function mailCount(pattern) {
+  return readFileSync(join(dir, 'mail.log'), 'utf8').split(pattern).length - 1;
 }
 
 function staffList(id, timestamp = now()) {
@@ -201,8 +225,11 @@ test('staff reads, replies, and sender sees the reply', async () => {
   const { status, data } = await staffList('hannah');
   assert.equal(status, 200);
   const conv = data.conversations.find((c) => c.public_id === publicId);
+  assert.equal(conv.messages, undefined);
+  assert.equal(conv.last_seq, 2);
+  assert.equal(conv.last_author, 'sender');
   const key = kk.openSealedKey(conv.sealed_key, staff.hannah.box);
-  const first = conv.messages[0];
+  const first = (await api({ action: 'get', conv_id: conv.conv_id })).data.messages[0];
   assert.equal(kk.decryptMessage(key, conv.conv_id, 1, first.author, first.ciphertext).body, SECRET_TEXT);
 
   const reply = appendRequest(conv.conv_id, key, 3, 'hannah', staff.hannah.sign, { body: 'reply' });
@@ -400,5 +427,97 @@ test('a removed trusted person does not block deletion', async () => {
     assert.deepEqual((await api(voteRequest('hannah', c, 1, true))).data, { deleted: true });
   } finally {
     writeFileSync(keysFile, original);
+  }
+});
+
+test('IDs with a trailing newline are rejected', async () => {
+  assert.equal((await api({ action: 'get', conv_id: `${'0'.repeat(64)}\n` })).status, 400);
+});
+
+test('a conversation is capped in total bytes', async () => {
+  const size = 552;     // 512 padded + 24 nonce + 16 tag
+  writeConfig({ limits: { conversation_bytes: size * 5 } });
+  try {
+    const c = await newConversation();
+    for (let seq = 2; seq <= 5; seq++) {
+      assert.equal((await api(appendRequest(c.convId, c.key, seq, 'hannah', staff.hannah.sign))).status, 200);
+    }
+    assert.equal((await api(appendRequest(c.convId, c.key, 6, 'hannah', staff.hannah.sign))).status, 413);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('sender messages per conversation and hour are limited', async () => {
+  writeConfig({ limits: { sender_messages_per_hour: 3 } });
+  try {
+    const c = await newConversation();
+    assert.equal((await api(appendRequest(c.convId, c.key, 2, 'sender', c.sign))).status, 200);
+    assert.equal((await api(appendRequest(c.convId, c.key, 3, 'sender', c.sign))).status, 200);
+    assert.equal((await api(appendRequest(c.convId, c.key, 4, 'sender', c.sign))).status, 429);
+    assert.equal((await api(appendRequest(c.convId, c.key, 4, 'hannah', staff.hannah.sign))).status, 200);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('a full database refuses senders but not trusted persons', async () => {
+  const c = await newConversation();
+  writeConfig({ limits: { database_bytes: 1 } });
+  try {
+    const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+    assert.equal((await api(await createRequest(s))).status, 507);
+    assert.equal((await api(appendRequest(c.convId, c.key, 2, 'sender', c.sign))).status, 507);
+    assert.equal((await api(appendRequest(c.convId, c.key, 2, 'hannah', staff.hannah.sign))).status, 200);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('the proof of work gets harder as new conversations pile up', async () => {
+  writeConfig({ pow: { step: 2 } });
+  try {
+    const { data } = await api({ action: 'challenge' });
+    assert.ok(data.bits > POW.bits, `bits ${data.bits}`);
+    const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+    assert.equal((await api(await createRequest(s, { pow: signedChallenge() }))).status, 403);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('notifications beyond the hourly budget become one summary mail', async () => {
+  const [{ value }] = dbQuery("SELECT value FROM counters WHERE name = 'notify' ORDER BY hour DESC LIMIT 1");
+  writeConfig({ limits: { notifications_per_hour: value } });
+  try {
+    const before = mailCount('Subject: [Kummerkasten] Many new messages');
+    const a = await newConversation();
+    const b = await newConversation();
+    assert.equal(mailCount('Subject: [Kummerkasten] Many new messages'), before + 2);   // once per staff
+    assert.equal(mailCount(`New conversation #${a.publicId}`) + mailCount(`New conversation #${b.publicId}`), 0);
+  } finally {
+    writeConfig();
+  }
+});
+
+test('marking as resolved tells the other trusted persons', async () => {
+  const c = await newConversation();
+  assert.equal((await api(closeRequest('hannah', c.publicId, 1))).status, 200);
+  const log = readFileSync(join(dir, 'mail.log'), 'utf8');
+  assert.match(log, new RegExp(`To: g@example.org\r?\nSubject: \\[Kummerkasten\\] Conversation #${c.publicId} marked as resolved`));
+});
+
+test('spent challenges keep only a coarse expiry', async () => {
+  await newConversation();
+  for (const { expires } of dbQuery('SELECT expires FROM used_challenges')) {
+    assert.equal(expires % 3600, 0);
+  }
+});
+
+test('tables keep no insertion order', () => {
+  const tables = dbQuery("SELECT name, sql FROM sqlite_master WHERE type = 'table'");
+  assert.ok(tables.length >= 6);
+  for (const { name, sql } of tables) {
+    assert.match(sql, /WITHOUT ROWID/, name);
   }
 });

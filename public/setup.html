@@ -28,7 +28,9 @@
 
 <form id="form" class="card" autocomplete="off">
   <label for="staff-id" data-i18n="setup.id"></label>
-  <input id="staff-id" type="text" autocapitalize="off" spellcheck="false" required>
+  <input id="staff-id" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32" required aria-describedby="staff-id-hint">
+  <p id="staff-id-hint" class="hint" data-i18n="setup.idHint"></p>
+  <p id="staff-id-check" class="hint" aria-live="polite" hidden></p>
   <label for="staff-name" data-i18n="setup.name"></label>
   <input id="staff-name" type="text" required>
   <label for="staff-email" data-i18n="setup.email"></label>

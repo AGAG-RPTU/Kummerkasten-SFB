@@ -1,6 +1,7 @@
 import { initPage } from './site.js';
 import { t, onLanguageChange } from './i18n.js';
 import * as kk from './crypto.js';
+import { loadStaff } from './api.js';
 import { $, status, nextPaint, attachWordFeedback } from './ui.js';
 
 initPage();
@@ -8,6 +9,24 @@ const refreshFeedback = attachWordFeedback($('retype'), $('feedback'), kk.PASSPH
 onLanguageChange(refreshFeedback);
 
 let passphrase = null;
+
+// Checks the user name while it is typed: allowed characters, and whether
+// keys.json already has it (fine only when changing one's own passphrase).
+let takenIds = [];
+loadStaff().then((staff) => {
+  takenIds = staff.map((s) => s.id);
+  checkId();
+}).catch(() => {});
+
+function checkId() {
+  const id = $('staff-id').value.trim();
+  const message = !id ? '' : !kk.STAFF_ID_PATTERN.test(id) ? t('err.id') : takenIds.includes(id) ? t('setup.idTaken') : '';
+  $('staff-id-check').textContent = message;
+  $('staff-id-check').className = `hint ${message ? 'bad' : ''}`;
+  $('staff-id-check').hidden = !message;
+}
+$('staff-id').addEventListener('input', checkId);
+onLanguageChange(checkId);
 
 $('generate').addEventListener('click', async () => {
   await kk.ready;

@@ -68,6 +68,9 @@ function render() {
     });
   });
   $('thread').replaceChildren(...views);
+  $('readers').textContent = t('conv.readers', {
+    names: conv.recipients.map((id) => staffNames[id] ?? id).join(', '),
+  });
 
   const onlySender = conv.messages.every((m) => m.author === 'sender');
   const note = conv.status === 'closed' ? t('conv.closed') : onlySender ? t('conv.noReply') : '';

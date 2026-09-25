@@ -167,9 +167,10 @@ test('create with wrong password', async () => {
   assert.equal(status, 401);
 });
 
-test('create must seal the key for every staff member', async () => {
+test('recipients must be known trusted persons, at least one', async () => {
+  assert.equal((await api(await createRequest(sender, { sealed_keys: {} }))).status, 400);
   const req = await createRequest(sender);
-  delete req.sealed_keys.gabriela;
+  req.sealed_keys.nobody = req.sealed_keys.hannah;
   assert.equal((await api(req)).status, 400);
 });
 
@@ -562,4 +563,27 @@ test('after a key change, the current key takes over conversations sealed to the
     writeFileSync(keysFile, original);
     staff.hannah = previous;
   }
+});
+
+test('a conversation for some trusted persons reaches only them', async () => {
+  const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
+  const req = await createRequest(s);
+  delete req.sealed_keys.gabriela;
+  const { status, data } = await api(req);
+  assert.equal(status, 200);
+  const id = data.public_id;
+
+  assert.deepEqual((await api({ action: 'get', conv_id: s.convId })).data.recipients, ['hannah']);
+  const hannahs = (await staffList('hannah')).data.conversations.find((c) => c.public_id === id);
+  assert.deepEqual(hannahs.recipients, ['hannah']);
+  assert.equal((await staffList('gabriela')).data.conversations.find((c) => c.public_id === id), undefined);
+  assert.equal((await api(appendRequest(s.convId, s.key, 2, 'gabriela', staff.gabriela.sign))).status, 403);
+
+  await api(appendRequest(s.convId, s.key, 2, 'hannah', staff.hannah.sign));
+  await api(appendRequest(s.convId, s.key, 3, 'sender', s.sign));
+  const log = readFileSync(join(dir, 'mail.log'), 'utf8');
+  const to = (subject) => [...log.matchAll(new RegExp(`To: (\\S+)\\r?\\nSubject: \\[Kummerkasten\\] ${subject}`, 'g'))].map((m) => m[1]);
+  assert.deepEqual(to(`New conversation #${id}`), ['h@example.org']);
+  assert.deepEqual(to(`New message in conversation #${id}`), ['h@example.org']);
+  assert.deepEqual(to(`New reply by a colleague in conversation #${id}`), []);
 });

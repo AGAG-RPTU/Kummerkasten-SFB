@@ -84,7 +84,7 @@ function run(string $privateDir): void
         $result = match ($req['action'] ?? null) {
             'challenge' => challenge($db, $config),
             'create' => create($db, $req, $config, $staff),
-            'get' => get($db, $req),
+            'get' => get($db, $req, $staff),
             'append' => append($db, $req, $config, $staff),
             'delete' => delete($db, $req),
             'staff_list' => staff_list($db, $req, $staff),
@@ -163,14 +163,15 @@ function create(PDO $db, array $req, array $config, array $staff): array
     $ciphertext = ciphertext_field($req);
     verify(append_statement($convId, 1, SENDER, $ciphertext), b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES), $signPk);
 
-    // A key for every trusted person, so a tampered client cannot leave one
-    // out. Whether each key really opens is only checkable by its recipient.
+    // The sender chooses the recipients: a key for each, at least one, all in
+    // keys.json. Whether each key really opens is only checkable by its
+    // recipient.
     $sealed = $req['sealed_keys'] ?? null;
-    if (!is_array($sealed) || array_diff_key($staff, $sealed) || array_diff_key($sealed, $staff)) {
-        throw new HttpError('sealed_keys must cover exactly the staff in keys.json', HTTP_BAD_REQUEST);
+    if (!is_array($sealed) || !$sealed || array_diff_key($sealed, $staff)) {
+        throw new HttpError('sealed_keys must name at least one trusted person from keys.json', HTTP_BAD_REQUEST);
     }
-    foreach (array_keys($staff) as $id) {
-        $sealed[$id] = b64_field($sealed, $id, SEALED_KEY_BYTES);
+    foreach (array_keys($sealed) as $id) {
+        $sealed[$id] = b64_field($sealed, (string)$id, SEALED_KEY_BYTES);
     }
 
     $now = now_hour();
@@ -197,16 +198,17 @@ function create(PDO $db, array $req, array $config, array $staff): array
         throw $e;
     }
 
-    notify($db, $config, $staff, array_keys($staff), "New conversation #$publicId");
+    notify($db, $config, $staff, array_keys($sealed), "New conversation #$publicId");
     return ['public_id' => $publicId];
 }
 
-function get(PDO $db, array $req): array
+function get(PDO $db, array $req, array $staff): array
 {
     $conv = find_conversation($db, conv_id_field($req)) ?? throw new HttpError('not found', HTTP_NOT_FOUND);
     return [
         'public_id' => $conv['public_id'],
         'status' => $conv['status'],
+        'recipients' => recipients($db, $conv['conv_id'], $staff),
         'messages' => messages($db, $conv['conv_id']),
     ];
 }
@@ -264,7 +266,7 @@ function append(PDO $db, array $req, array $config, array $staff): array
     }
 
     if ($notify) {
-        $others = array_values(array_diff(array_keys($staff), [$author]));
+        $others = array_values(array_diff(recipients($db, $convId, $staff), [$author]));
         $what = $author === SENDER ? 'New message' : 'New reply by a colleague';
         notify($db, $config, $staff, $others, "$what in conversation #{$conv['public_id']}");
     }
@@ -322,7 +324,7 @@ function staff_list(PDO $db, array $req, array $staff): array
             [$row['conv_id']])->fetch();
         $row['last_seq'] = $last['seq'];
         $row['last_author'] = $last['author'];
-        $row['delete_voters'] = delete_voters($db, $row['conv_id'], $staff);
+        $row['recipients'] = recipients($db, $row['conv_id'], $staff);
         $row['delete_votes'] = query($db, 'SELECT staff_id FROM delete_votes WHERE conv_id = ? ORDER BY staff_id',
             [$row['conv_id']])->fetchAll(PDO::FETCH_COLUMN);
     }
@@ -360,7 +362,7 @@ function staff_close(PDO $db, array $req, array $config, array $staff): array
     }
 
     // One person can shorten the retention, so the others should know.
-    $others = array_values(array_diff(array_keys($staff), [$staffId]));
+    $others = array_values(array_diff(recipients($db, $convId, $staff), [$staffId]));
     notify($db, $config, $staff, $others, "Conversation #$publicId marked as resolved");
     return [];
 }
@@ -398,7 +400,7 @@ function staff_delete_vote(PDO $db, array $req, array $staff): array
             query($db, 'DELETE FROM delete_votes WHERE conv_id = ? AND staff_id = ?', [$convId, $staffId]);
         }
         $votes = query($db, 'SELECT staff_id FROM delete_votes WHERE conv_id = ?', [$convId])->fetchAll(PDO::FETCH_COLUMN);
-        $deleted = !array_diff(delete_voters($db, $convId, $staff), $votes);
+        $deleted = !array_diff(recipients($db, $convId, $staff), $votes);
         if ($deleted) {
             query($db, 'DELETE FROM conversations WHERE conv_id = ?', [$convId]);
         }
@@ -435,9 +437,10 @@ function staff_rekey(PDO $db, array $req, array $staff): array
     return [];
 }
 
-// Whose vote a deletion needs: staff who hold the conversation's key and are
-// still in keys.json. Someone removed from keys.json cannot block it.
-function delete_voters(PDO $db, string $convId, array $staff): array
+// Who can read a conversation: staff who hold its key and are still in
+// keys.json. They get its notifications, and deleting it needs all their
+// votes; someone removed from keys.json cannot block that.
+function recipients(PDO $db, string $convId, array $staff): array
 {
     $recipients = query($db, 'SELECT staff_id FROM recipient_keys WHERE conv_id = ? ORDER BY staff_id', [$convId])
         ->fetchAll(PDO::FETCH_COLUMN);

@@ -165,7 +165,11 @@ function renderConversation(c) {
   });
 
   const voted = c.delete_votes.includes(me.id);
-  const missing = c.delete_voters.filter((id) => !c.delete_votes.includes(id));
+  const missing = c.recipients.filter((id) => !c.delete_votes.includes(id));
+  const others = c.recipients.filter((id) => id !== me.id);
+  const readers = h('p', { class: 'note' }, others.length
+    ? t('staff.alsoReads', { names: others.map(authorName).join(', ') })
+    : t('staff.onlyYou'));
   const votes = c.delete_votes.length
     ? h('p', { class: 'note' }, t('staff.deleteVotes', {
       voted: c.delete_votes.map(authorName).join(', '),
@@ -198,6 +202,7 @@ function renderConversation(c) {
       h('span', { class: 'subject' }, first.subject || t('staff.noSubject')),
       badge,
       h('span', { class: 'when' }, formatTime(c.updated_at))),
+    readers,
     h('div', { class: 'thread' }, ...thread),
     form);
   details.open = expanded.has(c.public_id);

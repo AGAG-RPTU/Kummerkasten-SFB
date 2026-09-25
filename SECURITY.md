@@ -7,7 +7,8 @@ code. The website links here from its footer and its privacy section.
 ## In short
 
 - Messages are encrypted in the sender's browser. Only the sender (with their
-  codeword) and the trusted persons listed on the front page can read them.
+  codeword) and the trusted persons they chose among those listed on the front
+  page can read them.
   The server, its operator, the hosting provider and anyone who steals the
   database see only ciphertext.
 - The sender stays anonymous towards the application: no account, no cookies,
@@ -41,8 +42,11 @@ code. The website links here from its footer and its privacy section.
 - **A compromised device.** Malware, browser extensions or someone with access
   to the computer can read what the browser shows.
 - **Metadata.** The server sees when a conversation receives messages (to the
-  hour), how many, their size rounded up to 512 bytes, and which trusted
-  person replies. The hosting provider's web server logs record IP addresses
+  hour), how many, their size rounded up to 512 bytes, which trusted persons
+  a conversation is encrypted for, and which of them replies. So whoever can
+  see the database also sees that a conversation leaves someone out, though
+  not what it is about; a trusted person who also runs the server sees that
+  about themselves. The hosting provider's web server logs record IP addresses
   and exact times for about 15 days; combined with the database, they can
   link an IP address to a conversation. Notification emails go out at once
   and show the exact time a message arrived. For strong anonymity, use the
@@ -141,9 +145,11 @@ designed to fit it: static files only, no inline scripts, a strict CSP.
   includes their id.
 - The subkeys come from libsodium's `crypto_kdf_derive_from_key` with
   separate contexts for senders and trusted persons.
-- K is sealed (`crypto_box_seal`) to the X25519 key of every trusted person in
-  `keys.json` when the conversation starts. A trusted person added later
-  cannot read earlier conversations.
+- K is sealed (`crypto_box_seal`) to the X25519 key of each trusted person the
+  sender chose, by default all in `keys.json`, when the conversation starts.
+  Only they see the conversation in their list, get its notifications, can
+  reply, and vote on deleting it. A trusted person added later cannot read
+  earlier conversations.
 - To change a passphrase, a trusted person creates a new key under the same
   id, which replaces the old one in `keys.json`. After logging in with the new
   passphrase, they enter the previous one once: the browser opens their

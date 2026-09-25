@@ -85,6 +85,30 @@ function sameContent(a, b) {
   return [...new Set([...Object.keys(a), ...Object.keys(b)])].every((k) => a[k] === b[k]);
 }
 
+// The sender picks who can read the message; all are ticked to start with.
+let sending = false;
+
+function chosenRecipients() {
+  return [...document.querySelectorAll('#recipients input:checked')].map((input) => input.value);
+}
+
+function updateSendButton() {
+  const none = !chosenRecipients().length;
+  $('recipients-none').hidden = !none;
+  $('send').disabled = sending || none;
+}
+
+loadStaff().then((staff) => {
+  if (!staff.length) {
+    $('recipients').replaceChildren(h('p', { class: 'note' }, t('err.notConfigured')));
+  } else {
+    $('recipients').replaceChildren(...staff.map((s) => h('label', { class: 'check' },
+      h('input', { type: 'checkbox', value: s.id, checked: '' }), ` ${s.name}`)));
+  }
+  updateSendButton();
+}).catch(() => {});
+$('recipients').addEventListener('change', updateSendButton);
+
 $('form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const body = $('body').value.trim();
@@ -93,14 +117,20 @@ $('form').addEventListener('submit', async (event) => {
     return;
   }
 
-  $('send').disabled = true;
+  sending = true;
+  updateSendButton();
   status($('status'), 'info', t('status.encrypting'));
   await nextPaint();
   try {
     await kk.ready;
-    const staff = await loadStaff();
-    if (!staff.length) {
+    const everyone = await loadStaff();
+    if (!everyone.length) {
       throw new Error(t('err.notConfigured'));
+    }
+    const chosen = chosenRecipients();
+    const staff = everyone.filter((s) => chosen.includes(s.id));
+    if (!staff.length) {
+      throw new Error(t('err.noRecipients'));
     }
 
     const content = { category: $('category').value, subject: $('subject').value.trim(), body };
@@ -119,7 +149,8 @@ $('form').addEventListener('submit', async (event) => {
     showCodeword();
   } catch (err) {
     status($('status'), 'error', err.status || isNetworkError(err) ? apiErrorText(err) : err.message);
-    $('send').disabled = false;
+    sending = false;
+    updateSendButton();
     startPow();     // the server spends a challenge on every attempt
   }
 });

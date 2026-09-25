@@ -191,6 +191,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 .feedback { font-size: 0.9rem; color: var(--muted); min-height: 1.4em; margin-top: 0.3rem; }
 .feedback .ok { color: var(--ok); }
 .feedback .bad { color: var(--bad); }
+.hint.bad { color: var(--bad); }
 
 /* ---------------------------------------------------------- codeword */
 

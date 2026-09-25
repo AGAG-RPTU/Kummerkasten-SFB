@@ -111,10 +111,16 @@ Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
 - `tools/deploy.sh` warns while the legal pages still name netcup.
 
 Changing trusted persons: a person added later cannot read or act on
-conversations that started before, and a person who replaces their key loses
-access to their earlier ones. Removing someone from `keys.json` stops them
-from listing, replying and closing, but anyone who once held a conversation's
-key and ID can keep reading it; keys are never rotated.
+conversations that started before. Removing someone from `keys.json` stops
+them from listing, replying and closing, but anyone who once held a
+conversation's key and ID can keep reading it; keys are never rotated.
+
+Changing a passphrase: the person creates a new key on `/setup` with their
+existing id, and the maintainer replaces the `box` and `sign` of their entry
+in `keys.json`. After logging in with the new passphrase, the staff page asks
+once for the previous one and moves their conversations to the new key
+(`staff_rekey`, signed with the new key). Without the previous passphrase
+those conversations stay unreadable to them.
 
 Spam protection for new conversations: the browser solves a proof-of-work
 challenge in a worker while the sender writes (`pow` in `config.php`; see

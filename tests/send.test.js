@@ -120,3 +120,22 @@ test('only failed requests count as network errors', () => {
   assert.ok(isNetworkError(new NetworkError('x')));
   assert.ok(!isNetworkError(new TypeError('x is not a function')));
 });
+
+test('transferKeys reseals only what the previous key opens', async () => {
+  const { transferKeys } = await import('../public/js/rekey.js');
+  const previous = kk.deriveStaff(['aardvark'], 'hannah');
+  const current = kk.deriveStaff(['zebra'], 'hannah');
+  const key = kk.deriveSender(['banana']).key;
+  const convs = [
+    { public_id: 1, key: null, sealed_key: kk.sealKey(key, kk.toB64(previous.box.publicKey)) },
+    { public_id: 2, key: null, sealed_key: kk.toB64(new Uint8Array(80)) },          // garbage
+    { public_id: 3, key, sealed_key: kk.sealKey(key, kk.toB64(current.box.publicKey)) }, // already current
+  ];
+  const sent = [];
+  const call = async (action, body) => { sent.push({ action, ...body }); return {}; };
+
+  const moved = await transferKeys({ staffId: 'hannah', convs, previous, current }, call);
+  assert.equal(moved, 1);
+  assert.deepEqual(sent.map((s) => [s.action, s.public_id]), [['staff_rekey', 1]]);
+  assert.deepEqual(kk.openSealedKey(sent[0].sealed_key, current.box), key);
+});

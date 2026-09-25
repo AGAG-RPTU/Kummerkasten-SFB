@@ -90,6 +90,7 @@ function run(string $privateDir): void
             'staff_list' => staff_list($db, $req, $staff),
             'staff_close' => staff_close($db, $req, $config, $staff),
             'staff_delete_vote' => staff_delete_vote($db, $req, $staff),
+            'staff_rekey' => staff_rekey($db, $req, $staff),
             default => throw new HttpError('unknown action', HTTP_BAD_REQUEST),
         };
         respond(HTTP_OK, $result);
@@ -407,6 +408,31 @@ function staff_delete_vote(PDO $db, array $req, array $staff): array
         throw $e;
     }
     return ['deleted' => $deleted];
+}
+
+// After a trusted person's key changed (same id, new keys in keys.json),
+// their browser opens each conversation key with the previous passphrase and
+// seals it to the current key; this stores the new copy. Signed with the
+// current key, so a leaked previous passphrase alone cannot do it. It only
+// replaces the caller's own copy and so grants no one new access.
+function staff_rekey(PDO $db, array $req, array $staff): array
+{
+    $staffId = staff_field($req, $staff);
+    $timestamp = timestamp_field($req);
+    $publicId = $req['public_id'] ?? null;
+    if (!is_int($publicId)) {
+        throw new HttpError('invalid public_id', HTTP_BAD_REQUEST);
+    }
+    $sealed = b64_field($req, 'sealed_key', SEALED_KEY_BYTES);
+    verify(PROTOCOL . "/rekey|$staffId|$publicId|" . hash('sha256', $sealed) . "|$timestamp",
+        b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES), $staff[$staffId]['sign']);
+
+    $convId = query($db, 'SELECT conv_id FROM conversations WHERE public_id = ?', [$publicId])->fetchColumn()
+        ?: throw new HttpError('not found', HTTP_NOT_FOUND);
+    require_recipient($db, $convId, $staffId);
+    query($db, 'UPDATE recipient_keys SET sealed_key = ? WHERE conv_id = ? AND staff_id = ?',
+        [b64($sealed), $convId, $staffId]);
+    return [];
 }
 
 // Whose vote a deletion needs: staff who hold the conversation's key and are

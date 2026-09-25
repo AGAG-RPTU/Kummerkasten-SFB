@@ -173,6 +173,11 @@ export function staffDeleteVoteStatement(staffId, publicId, lastSeq, vote, times
   return `${PROTOCOL}/delete-vote|${staffId}|${publicId}|${lastSeq}|${vote ? 'yes' : 'no'}|${timestamp}`;
 }
 
+export function staffRekeyStatement(staffId, publicId, sealedKeyB64, timestamp) {
+  const digest = sodium.to_hex(sodium.crypto_hash_sha256(fromB64(sealedKeyB64)));
+  return `${PROTOCOL}/rekey|${staffId}|${publicId}|${digest}|${timestamp}`;
+}
+
 export function sign(statement, signKeyPair) {
   return toB64(sodium.crypto_sign_detached(statement, signKeyPair.privateKey));
 }

@@ -18,5 +18,13 @@
     <button id="lock" type="button" class="secondary" data-i18n="staff.lock"></button>
   </div>
   <p id="inbox-status" class="status" hidden></p>
+  <form id="rekey" class="card" autocomplete="off" hidden>
+    <p id="rekey-notice"></p>
+    <label for="old-passphrase" data-i18n="staff.rekey.label"></label>
+    <input id="old-passphrase" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off">
+    <div id="rekey-feedback" class="feedback" aria-live="polite"></div>
+    <div class="actions"><button type="submit" data-i18n="staff.rekey.submit"></button></div>
+    <p id="rekey-status" class="status" hidden></p>
+  </form>
   <div id="convs" class="convs"></div>
 </section>

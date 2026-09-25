@@ -50,7 +50,8 @@ code. The website links here from its footer and its privacy section.
 - **Loss of a codeword or passphrase.** Whoever has a codeword can read, write
   and delete that conversation. Whoever has a trusted person's passphrase can
   read all conversations addressed to them, past ones included; there is no
-  forward secrecy.
+  forward secrecy. Changing the passphrase (below) locks the old one out from
+  then on; what was read before stays read.
 - **Availability.** The server can withhold or drop messages, and a
   determined attacker can slow down or block new conversations for a while.
 - **Trusted persons themselves.** They read the messages by design.
@@ -142,8 +143,15 @@ designed to fit it: static files only, no inline scripts, a strict CSP.
   separate contexts for senders and trusted persons.
 - K is sealed (`crypto_box_seal`) to the X25519 key of every trusted person in
   `keys.json` when the conversation starts. A trusted person added later
-  cannot read earlier conversations; one who replaces their key loses access
-  to their earlier ones.
+  cannot read earlier conversations.
+- To change a passphrase, a trusted person creates a new key under the same
+  id, which replaces the old one in `keys.json`. After logging in with the new
+  passphrase, they enter the previous one once: the browser opens their
+  conversation keys with the previous key and seals them to the new one. The
+  server stores these copies only if the new key signs them, so a leaked
+  previous passphrase alone cannot do this, and only the person's own copies
+  are replaced, so it gives no one new access. Without the previous
+  passphrase, those conversations stay unreadable to them.
 
 ### Messages
 

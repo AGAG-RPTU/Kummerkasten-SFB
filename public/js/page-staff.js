@@ -3,10 +3,12 @@ import { t, formatTime, onLanguageChange } from './i18n.js';
 import * as kk from './crypto.js';
 import { call, loadStaff, now, ApiError } from './api.js';
 import { sendReply } from './send.js';
+import { transferKeys } from './rekey.js';
 import { $, h, status, nextPaint, apiErrorText, attachWordFeedback, messageView } from './ui.js';
 
 initPage();
 const refreshFeedback = attachWordFeedback($('passphrase'), $('feedback'), kk.PASSPHRASE_WORDS);
+const refreshRekeyFeedback = attachWordFeedback($('old-passphrase'), $('rekey-feedback'), kk.PASSPHRASE_WORDS);
 
 let staff = [];
 let me = null;          // { id, name, keys }, in memory only
@@ -62,6 +64,35 @@ async function load() {
   }
 }
 
+// Conversations the current key cannot open are usually still sealed to the
+// person's previous key, after they changed their passphrase.
+function showRekey() {
+  const sealedElsewhere = convs.filter((c) => !c.key).length;
+  $('rekey').hidden = !sealedElsewhere;
+  $('rekey-notice').textContent = t('staff.rekey.notice', { n: sealedElsewhere });
+}
+
+$('rekey').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const { words } = kk.parseWords($('old-passphrase').value);
+  status($('rekey-status'), 'info', t('status.deriving'));
+  await nextPaint();
+  try {
+    const previous = kk.deriveStaff(words, me.id);
+    const moved = await transferKeys({ staffId: me.id, convs, previous, current: me.keys }, call);
+    if (!moved) {
+      status($('rekey-status'), 'error', t('staff.rekey.none'));
+      return;
+    }
+    $('old-passphrase').value = '';
+    refreshRekeyFeedback();
+    await load();
+    status($('inbox-status'), 'info', t('staff.rekey.done', { n: moved }));
+  } catch (err) {
+    status($('rekey-status'), 'error', apiErrorText(err));
+  }
+});
+
 // The list carries metadata only; messages come per conversation. A failed
 // fetch leaves that conversation empty rather than failing the whole list.
 async function fetchMessages(c) {
@@ -101,6 +132,7 @@ function authorName(id) {
 }
 
 function render() {
+  showRekey();
   if (!convs.length) {
     $('convs').replaceChildren(h('p', { class: 'note' }, t('staff.none')));
     return;
@@ -246,6 +278,10 @@ $('lock').addEventListener('click', () => {
   convs = [];
   expanded.clear();
   drafts.clear();
+  $('old-passphrase').value = '';
+  refreshRekeyFeedback();
+  status($('rekey-status'), '');
+  $('rekey').hidden = true;
   $('convs').replaceChildren();
   $('inbox').hidden = true;
   $('unlock').hidden = false;
@@ -257,6 +293,7 @@ function showWhoami() {
 
 onLanguageChange(() => {
   showWhoami();
+  refreshRekeyFeedback();
   render();
   refreshFeedback();
 });

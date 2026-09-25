@@ -521,3 +521,45 @@ test('tables keep no insertion order', () => {
     assert.match(sql, /WITHOUT ROWID/, name);
   }
 });
+
+function rekeyRequest(id, publicId, sealedKey, signKeys, timestamp = now()) {
+  return {
+    action: 'staff_rekey', staff_id: id, public_id: publicId, sealed_key: sealedKey, timestamp,
+    signature: kk.sign(kk.staffRekeyStatement(id, publicId, sealedKey, timestamp), signKeys),
+  };
+}
+
+test('after a key change, the current key takes over conversations sealed to the previous one', async () => {
+  const c = await newConversation();
+  const keysFile = join(dir, 'keys.json');
+  const original = readFileSync(keysFile, 'utf8');
+  const previous = staff.hannah;
+  const current = kk.deriveStaff(['zebra'], 'hannah');
+  const keys = JSON.parse(original);
+  Object.assign(keys.staff.find((e) => e.id === 'hannah'),
+    { box: kk.toB64(current.box.publicKey), sign: kk.toB64(current.sign.publicKey) });
+  writeFileSync(keysFile, JSON.stringify(keys));
+  staff.hannah = current;
+  try {
+    const listed = (await staffList('hannah')).data.conversations.find((x) => x.public_id === c.publicId);
+    assert.throws(() => kk.openSealedKey(listed.sealed_key, current.box));
+    const key = kk.openSealedKey(listed.sealed_key, previous.box);
+    const resealed = kk.sealKey(key, kk.toB64(current.box.publicKey));
+
+    // Only the current key may do it; a leaked previous passphrase is not enough.
+    assert.equal((await api(rekeyRequest('hannah', c.publicId, resealed, previous.sign))).status, 403);
+    // Nobody can replace another person's copy.
+    assert.equal((await api(rekeyRequest('hannah', c.publicId, resealed, staff.gabriela.sign))).status, 403);
+
+    assert.equal((await api(rekeyRequest('hannah', c.publicId, resealed, current.sign))).status, 200);
+    const after = (await staffList('hannah')).data.conversations.find((x) => x.public_id === c.publicId);
+    assert.deepEqual(kk.openSealedKey(after.sealed_key, current.box), key);
+
+    // Gabriela's copy is untouched.
+    const theirs = (await staffList('gabriela')).data.conversations.find((x) => x.public_id === c.publicId);
+    assert.deepEqual(kk.openSealedKey(theirs.sealed_key, staff.gabriela.box), key);
+  } finally {
+    writeFileSync(keysFile, original);
+    staff.hannah = previous;
+  }
+});

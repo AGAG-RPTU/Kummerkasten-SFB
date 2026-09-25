@@ -3,9 +3,23 @@
     {
       "id": "mhorn",
       "name": "Max Horn",
-      "email": "max@quendi.de",
-      "box": "wBwv6Dw5IHHBaAHRCW7E8gE9dVN9woQEglGrDx6lmiI=",
-      "sign": "Y9qB4kimhYzI0sZ3gVrljeBAo4iTlXZ9GyUWHmGU3Cs="
+      "email": "mhorn@rptu.de",
+      "box": "w4Jn7nJy/t9B91Xb72O8+NHm7mQkBaI9D8YHxSVt4V4=",
+      "sign": "GcwR1IRorCti6UaBfBEBoOy8f5Bgh0/Xz62BgRHHywM="
+    },
+    {
+      "id": "martin",
+      "name": "Martin Wagner",
+      "email": "marwagne@rptu.de",
+      "box": "tCWR2qMtLhCG9GevyT5ETPkWOC+jsNsHIKxkcB3SXkw=",
+      "sign": "FCM1cJpN3OEJjHW7+UAYzj4l3e/dTbpf6TG9j6bfluU="
+    },
+    {
+      "id": "hannah",
+      "name": "Berenike",
+      "email": "dieterle@rptu.de",
+      "box": "Y2pI4uYOKRD1RMHYpjBeS5YemF8L9CkzNIWkQIXB1nw=",
+      "sign": "RHahyi54Me2GMmcPsUH3Y9BB8RWg3RVHGSemCUVEQfk="
     }
   ]
 }

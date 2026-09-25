@@ -288,7 +288,9 @@ $('lock').addEventListener('click', () => {
 });
 
 function showWhoami() {
-  $('whoami').textContent = me ? t('staff.whoami', { name: me.name, id: me.id }) : '';
+  $('whoami').textContent = me
+    ? t('staff.whoami', { name: me.name, id: me.id, fingerprint: kk.fingerprint(kk.toB64(me.keys.box.publicKey)) })
+    : '';
 }
 
 onLanguageChange(() => {

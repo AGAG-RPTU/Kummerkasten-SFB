@@ -101,7 +101,7 @@ const STRINGS = {
     'staff.rekey.submit': 'Take over',
     'staff.rekey.done': '{n} conversation(s) taken over; your current passphrase opens them now.',
     'staff.rekey.none': 'This passphrase opens none of these conversations.',
-    'staff.whoami': 'Logged in as {name} ({id}).',
+    'staff.whoami': 'Logged in as {name} ({id}). Your key fingerprint: {fingerprint}',
     'staff.voteDelete': 'Vote to delete',
     'staff.unvoteDelete': 'Withdraw delete vote',
     'staff.deleteConfirm': 'Vote to delete this conversation? It is deleted for everyone once all trusted persons have voted. This cannot be undone.',
@@ -109,7 +109,7 @@ const STRINGS = {
 
     'setup.title': 'Create a key for a trusted person',
     'setup.intro': 'Do this once, on your own device. The passphrase never leaves this browser. Afterwards send the entry shown below to whoever maintains the site.',
-    'setup.id': 'Short id (lowercase letters, e.g. hannah)',
+    'setup.id': 'Short id: your first name in lowercase letters, e.g. erika',
     'setup.rotate': 'Changing your passphrase: create a new key here with your existing short id and send the entry. Once it has replaced your old one, log in with the new passphrase; the page then asks once for the previous one, to take over your conversations.',
     'setup.name': 'Display name',
     'setup.email': 'Email address for notifications',
@@ -123,6 +123,7 @@ const STRINGS = {
     'setup.create': 'Create key',
     'setup.result': 'Your entry for keys.json; send it to whoever maintains the site:',
     'setup.fingerprint': 'Fingerprint',
+    'setup.fingerprintHint': 'A short checksum of your public key. It is not secret. The front page shows it next to your name, so that senders and you can check that the site encrypts for your key and not a swapped one. You need not save it: the trusted persons page shows it after you log in. If the front page ever shows a different one for you, tell the maintainer. You can also announce it in the SFB, so that others can compare.',
 
     'status.encrypting': 'Encrypting…',
     'status.deriving': 'Computing keys, this takes a moment…',
@@ -244,7 +245,7 @@ const STRINGS = {
     'staff.rekey.submit': 'Übernehmen',
     'staff.rekey.done': '{n} Unterhaltung(en) übernommen; deine aktuelle Passphrase öffnet sie jetzt.',
     'staff.rekey.none': 'Diese Passphrase öffnet keine dieser Unterhaltungen.',
-    'staff.whoami': 'Angemeldet als {name} ({id}).',
+    'staff.whoami': 'Angemeldet als {name} ({id}). Fingerabdruck deines Schlüssels: {fingerprint}',
     'staff.voteDelete': 'Für Löschen stimmen',
     'staff.unvoteDelete': 'Löschstimme zurückziehen',
     'staff.deleteConfirm': 'Für das Löschen dieser Unterhaltung stimmen? Sie wird für alle gelöscht, sobald alle Vertrauenspersonen zugestimmt haben. Das lässt sich nicht rückgängig machen.',
@@ -252,7 +253,7 @@ const STRINGS = {
 
     'setup.title': 'Schlüssel für eine Vertrauensperson erzeugen',
     'setup.intro': 'Einmalig auf dem eigenen Gerät durchführen. Die Passphrase verlässt diesen Browser nicht. Danach den angezeigten Eintrag an die Person schicken, die die Seite betreut.',
-    'setup.id': 'Kurzname (Kleinbuchstaben, z. B. hannah)',
+    'setup.id': 'Kurzname: dein Vorname in Kleinbuchstaben, z. B. erika',
     'setup.rotate': 'Passphrase wechseln: Erzeuge hier einen neuen Schlüssel mit deinem bisherigen Kurznamen und schick den Eintrag. Sobald er deinen alten ersetzt hat, melde dich mit der neuen Passphrase an; die Seite fragt dann einmal nach der früheren, um deine Unterhaltungen zu übernehmen.',
     'setup.name': 'Angezeigter Name',
     'setup.email': 'E-Mail-Adresse für Benachrichtigungen',
@@ -266,6 +267,7 @@ const STRINGS = {
     'setup.create': 'Schlüssel erzeugen',
     'setup.result': 'Dein Eintrag für keys.json; schick ihn an die Person, die die Seite betreut:',
     'setup.fingerprint': 'Fingerabdruck',
+    'setup.fingerprintHint': 'Eine kurze Prüfsumme deines öffentlichen Schlüssels. Sie ist nicht geheim. Die Startseite zeigt sie neben deinem Namen, damit Absender und du prüfen können, dass die Seite für deinen Schlüssel verschlüsselt und nicht für einen untergeschobenen. Du musst sie nicht speichern: Die Seite für Vertrauenspersonen zeigt sie nach der Anmeldung an. Falls die Startseite für dich einmal einen anderen zeigt, sag der Person Bescheid, die die Seite betreut. Du kannst ihn auch im SFB bekanntgeben, damit andere vergleichen können.',
 
     'status.encrypting': 'Verschlüssele…',
     'status.deriving': 'Berechne Schlüssel, das dauert einen Moment…',

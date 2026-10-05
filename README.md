@@ -72,8 +72,12 @@ committed, and `npm test` fails if they are stale.
 Host checklist (netcup, the current host, meets all of these; on `gap-www`
 `mail()` did not deliver without SMTP credentials):
 
-- PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`).
-- Apache with `.htaccess` support for `mod_headers` and `mod_rewrite`.
+- PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`), plus `curl` if
+  `ntfy_url` is used.
+- No database server: the data is one SQLite file in `private/data/`, which
+  PHP reads itself. No cron, Node or Composer on the host either.
+- Apache 2.4 with HTTPS and `.htaccess` support for `mod_headers` and
+  `mod_rewrite`.
 - `mail()` delivers (`sendmail_path` set, relay configured). Otherwise set
   `ntfy_url` in the config for push notifications instead.
 - `private/` writable by PHP. `tools/deploy.sh` puts it inside the webroot,

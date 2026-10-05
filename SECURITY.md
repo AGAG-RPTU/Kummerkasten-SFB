@@ -48,9 +48,9 @@ code. The website links here from its footer and its privacy section.
   not what it is about; a trusted person who also runs the server sees that
   about themselves. The hosting provider's web server logs record IP addresses
   and exact times for about 15 days; combined with the database, they can
-  link an IP address to a conversation. Notification emails go out at once
-  and show the exact time a message arrived. For strong anonymity, use the
-  Tor Browser.
+  link an IP address to a conversation. A notification email can go out at
+  once and then shows the exact time a message arrived. For strong anonymity,
+  use the Tor Browser.
 - **Loss of a codeword or passphrase.** Whoever has a codeword can read, write
   and delete that conversation. Whoever has a trusted person's passphrase can
   read all conversations addressed to them, past ones included; there is no
@@ -180,7 +180,8 @@ designed to fit it: static files only, no inline scripts, a strict CSP.
 | Per trusted person | K sealed to their key |
 | Message | ciphertext, position, author (sender or which trusted person), time rounded to the hour |
 | Proof of work | a spent challenge's random identifier until about an hour after it expired |
-| Counters | how many conversations and notifications this hour, site-wide |
+| Counters | how many conversations this hour, site-wide |
+| Notifications | per trusted person, the hour of the last notification mail, until they log in |
 
 Tables are stored in key order, not insertion order. Conversations are deleted
 30 days after being marked resolved and at the latest 365 days after the last
@@ -195,8 +196,9 @@ a laptop, done while the sender writes. Each challenge counts once. Every 5
 new conversations in an hour add one bit. A shared access password can be
 switched on in addition. Per conversation, messages, bytes and sender
 messages per hour are limited; senders are refused when the database is
-full, trusted persons are not; notification mails beyond an hourly budget
-become one summary.
+full, trusted persons are not. A trusted person gets one notification mail
+and then none until they log in, apart from a daily reminder while a message
+waits for an answer; the mail names no conversation.
 
 ### The site
 

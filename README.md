@@ -143,10 +143,20 @@ Abuse limits (`limits` and `pow` in `config.php`, defaults in `app.php`):
 every `step` new conversations in an hour make the proof of work twice as
 hard, with a hard cap behind it; per conversation, a maximum number of
 messages, of bytes, and of sender messages per hour; senders are refused once
-the database reaches `database_bytes`, trusted persons are not. Sender
-messages notify at most once per hour per conversation until a trusted person
-replies, and past `notifications_per_hour` one summary mail replaces the
-rest. Wrong passwords never lock anyone out.
+the database reaches `database_bytes`, trusted persons are not. Wrong
+passwords never lock anyone out.
+
+Notifications: a trusted person gets one mail when something new concerns
+them (a conversation, a message, a colleague's reply, a conversation marked
+resolved), then none until they log in on `/staff`, so a flood of messages
+is one mail each. While a message waits for an answer and they have not
+logged in, a reminder follows every 24 hours. Without cron, reminders go out
+with the next API request that is not a sender reading or deleting, such as
+someone opening `/write`. For punctual ones, schedule an hourly
+
+```sh
+curl -s -X POST -d '{"action":"challenge"}' https://…/api.php
+```
 
 ## License
 

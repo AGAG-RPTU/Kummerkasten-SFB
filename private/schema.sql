@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS conversations (
     status          TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed')),
     created_at      INTEGER NOT NULL,
     updated_at      INTEGER NOT NULL,
-    notified_at     INTEGER,                    -- last sender notification; NULL after a staff reply
     sender_sign_pk  TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS conversations_updated_at ON conversations (updated_at);
@@ -34,7 +33,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 -- Global rate limiting; no per-client data.
 CREATE TABLE IF NOT EXISTS counters (
-    name            TEXT NOT NULL,              -- 'create' or 'notify'
+    name            TEXT NOT NULL,              -- 'create'
     hour            INTEGER NOT NULL,
     value           INTEGER NOT NULL,
     PRIMARY KEY (name, hour)
@@ -45,6 +44,13 @@ CREATE TABLE IF NOT EXISTS delete_votes (
     conv_id         TEXT NOT NULL REFERENCES conversations (conv_id) ON DELETE CASCADE,
     staff_id        TEXT NOT NULL,
     PRIMARY KEY (conv_id, staff_id)
+) WITHOUT ROWID;
+
+-- Trusted persons who were mailed and have not logged in since; they get no
+-- further mail, except one a day.
+CREATE TABLE IF NOT EXISTS pending_notifications (
+    staff_id        TEXT PRIMARY KEY,
+    mailed_at       INTEGER NOT NULL
 ) WITHOUT ROWID;
 
 -- Proof-of-work challenges already spent, kept until the hour after expiry.

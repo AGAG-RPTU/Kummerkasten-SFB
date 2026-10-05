@@ -11,7 +11,7 @@ const SENDER = 'sender';
 // D: '$' must not accept a trailing newline.
 const STAFF_ID_PATTERN = '/^(?!sender$)[a-z][a-z0-9_]{0,31}$/D';
 const CONV_ID_PATTERN = '/^[0-9a-f]{64}$/D';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const HOUR = 3600;
 const DAY = 86400;
@@ -49,7 +49,6 @@ const DEFAULT_CONFIG = [
         'conversation_bytes' => 1000000,
         'sender_messages_per_hour' => 20,
         'database_bytes' => 200000000,
-        'notifications_per_hour' => 30,
     ],
 ];
 
@@ -81,7 +80,8 @@ function run(string $privateDir): void
         expire($db, $config['retention']);
         $staff = load_staff($config['keys_file']);
 
-        $result = match ($req['action'] ?? null) {
+        $action = $req['action'] ?? null;
+        $result = match ($action) {
             'challenge' => challenge($db, $config),
             'create' => create($db, $req, $config, $staff),
             'get' => get($db, $req, $staff),
@@ -93,6 +93,11 @@ function run(string $privateDir): void
             'staff_rekey' => staff_rekey($db, $req, $staff),
             default => throw new HttpError('unknown action', HTTP_BAD_REQUEST),
         };
+
+        // Not when a sender reads or deletes: the mail's time would show when.
+        if (!in_array($action, ['get', 'delete'], true)) {
+            remind($db, $config, $staff);
+        }
         respond(HTTP_OK, $result);
     } catch (HttpError $e) {
         respond($e->getCode(), ['error' => $e->getMessage()]);
@@ -184,8 +189,8 @@ function create(PDO $db, array $req, array $config, array $staff): array
             throw new HttpError('conversation exists', HTTP_CONFLICT);
         }
         $publicId = unused_public_id($db);
-        query($db, 'INSERT INTO conversations (conv_id, public_id, created_at, updated_at, notified_at, sender_sign_pk)
-                    VALUES (?, ?, ?, ?, ?, ?)', [$convId, $publicId, $now, $now, $now, b64($signPk)]);
+        query($db, 'INSERT INTO conversations (conv_id, public_id, created_at, updated_at, sender_sign_pk)
+                    VALUES (?, ?, ?, ?, ?)', [$convId, $publicId, $now, $now, b64($signPk)]);
         foreach ($sealed as $id => $key) {
             query($db, 'INSERT INTO recipient_keys (conv_id, staff_id, sealed_key) VALUES (?, ?, ?)',
                 [$convId, $id, b64($key)]);
@@ -198,7 +203,7 @@ function create(PDO $db, array $req, array $config, array $staff): array
         throw $e;
     }
 
-    notify($db, $config, $staff, array_keys($sealed), "New conversation #$publicId");
+    notify($db, $config, $staff, array_keys($sealed));
     return ['public_id' => $publicId];
 }
 
@@ -250,26 +255,14 @@ function append(PDO $db, array $req, array $config, array $staff): array
         // Nobody should delete a message they have not seen.
         query($db, 'DELETE FROM delete_votes WHERE conv_id = ?', [$convId]);
 
-        // Sender messages notify at most once per hour, so a flood of appends
-        // cannot flood mailboxes; a staff reply re-arms the notification.
-        $notifiedAt = query($db, 'SELECT notified_at FROM conversations WHERE conv_id = ?', [$convId])->fetchColumn();
-        $notify = $author !== SENDER || $notifiedAt === null || $notifiedAt < now_hour();
-        query($db, "UPDATE conversations SET updated_at = ?, status = 'open', notified_at = ? WHERE conv_id = ?", [
-            now_hour(),
-            $author === SENDER ? ($notify ? now_hour() : $notifiedAt) : null,
-            $convId,
-        ]);
+        query($db, "UPDATE conversations SET updated_at = ?, status = 'open' WHERE conv_id = ?", [now_hour(), $convId]);
         $db->exec('COMMIT');
     } catch (Throwable $e) {
         $db->exec('ROLLBACK');
         throw $e;
     }
 
-    if ($notify) {
-        $others = array_values(array_diff(recipients($db, $convId, $staff), [$author]));
-        $what = $author === SENDER ? 'New message' : 'New reply by a colleague';
-        notify($db, $config, $staff, $others, "$what in conversation #{$conv['public_id']}");
-    }
+    notify($db, $config, $staff, array_diff(recipients($db, $convId, $staff), [$author]));
     return ['seq' => $seq];
 }
 
@@ -313,6 +306,9 @@ function staff_list(PDO $db, array $req, array $staff): array
     $timestamp = timestamp_field($req);
     verify(PROTOCOL . "/list|$staffId|$timestamp", b64_field($req, 'signature', SODIUM_CRYPTO_SIGN_BYTES),
         $staff[$staffId]['sign']);
+
+    // They are about to see everything new, so the next news is mailed again.
+    query($db, 'DELETE FROM pending_notifications WHERE staff_id = ?', [$staffId]);
 
     $rows = query($db, 'SELECT c.conv_id, c.public_id, c.status, c.created_at, c.updated_at, k.sealed_key
                         FROM conversations c JOIN recipient_keys k ON k.conv_id = c.conv_id AND k.staff_id = ?
@@ -362,8 +358,7 @@ function staff_close(PDO $db, array $req, array $config, array $staff): array
     }
 
     // One person can shorten the retention, so the others should know.
-    $others = array_values(array_diff(recipients($db, $convId, $staff), [$staffId]));
-    notify($db, $config, $staff, $others, "Conversation #$publicId marked as resolved");
+    notify($db, $config, $staff, array_diff(recipients($db, $convId, $staff), [$staffId]));
     return [];
 }
 
@@ -615,12 +610,15 @@ function open_db(string $file, string $schemaFile): PDO
 }
 
 // The schema is idempotent, so tables added later appear in existing
-// databases. PRAGMA user_version marks changes that need more than that.
+// databases. PRAGMA user_version marks changes that need a rebuild:
+//   2  tables WITHOUT ROWID, so storage order follows the random keys
+//      instead of revealing which row was inserted when
+//   3  conversations.notified_at is gone
 function migrate(PDO $db, string $schema): void
 {
     $version = (int)$db->query('PRAGMA user_version')->fetchColumn();
     $tables = $db->query("SELECT name FROM sqlite_master WHERE type = 'table'")->fetchAll(PDO::FETCH_COLUMN);
-    if ($version < 2 && $tables) {
+    if ($version < SCHEMA_VERSION && $tables) {
         rebuild_tables($db, $tables, $schema);
     }
     $db->exec($schema);
@@ -629,8 +627,7 @@ function migrate(PDO $db, string $schema): void
     }
 }
 
-// Version 2: tables WITHOUT ROWID, so storage order follows the random keys
-// instead of revealing which row was inserted when.
+// Recreates every table from the schema and copies the columns both have.
 function rebuild_tables(PDO $db, array $tables, string $schema): void
 {
     $db->exec('PRAGMA foreign_keys = OFF');
@@ -639,14 +636,14 @@ function rebuild_tables(PDO $db, array $tables, string $schema): void
     try {
         $db->exec('DROP INDEX IF EXISTS conversations_updated_at');
         foreach ($tables as $table) {
-            $db->exec("ALTER TABLE \"$table\" RENAME TO \"{$table}_v1\"");
+            $db->exec("ALTER TABLE \"$table\" RENAME TO \"{$table}_old\"");
         }
         $db->exec($schema);
         foreach ($tables as $table) {
             $columns = implode(', ', array_map(fn($c) => "\"$c\"",
-                $db->query("SELECT name FROM pragma_table_info('{$table}_v1')")->fetchAll(PDO::FETCH_COLUMN)));
-            $db->exec("INSERT INTO \"$table\" ($columns) SELECT $columns FROM \"{$table}_v1\"");
-            $db->exec("DROP TABLE \"{$table}_v1\"");
+                array_intersect(column_names($db, "{$table}_old"), column_names($db, $table))));
+            $db->exec("INSERT INTO \"$table\" ($columns) SELECT $columns FROM \"{$table}_old\"");
+            $db->exec("DROP TABLE \"{$table}_old\"");
         }
         $db->exec('COMMIT');
     } catch (Throwable $e) {
@@ -656,6 +653,11 @@ function rebuild_tables(PDO $db, array $tables, string $schema): void
         $db->exec('PRAGMA legacy_alter_table = OFF');
         $db->exec('PRAGMA foreign_keys = ON');
     }
+}
+
+function column_names(PDO $db, string $table): array
+{
+    return $db->query("SELECT name FROM pragma_table_info('$table')")->fetchAll(PDO::FETCH_COLUMN);
 }
 
 function query(PDO $db, string $sql, array $params = []): PDOStatement
@@ -737,23 +739,61 @@ function unb64(string $text): string
 
 // ------------------------------------------------------------------ notifications
 
+// [subject, first line of the mail]
+const MAIL_NEWS = ['New activity', 'There is new activity in the Kummerkasten.'];
+const MAIL_REMINDER = ['Reminder: a message waits for an answer',
+    'A message in the Kummerkasten still waits for an answer.'];
+
+// A trusted person gets one mail and then none until they log in, so a flood
+// of messages cannot flood mailboxes. The mail names no conversation, because
+// it stands for everything that follows it too.
+function notify(PDO $db, array $config, array $staff, array $staffIds): void
+{
+    send_mail($config, $staff, array_filter($staffIds, fn($id) => claim_mail($db, $id)), MAIL_NEWS);
+}
+
+// Runs on requests, as there is no cron: whoever was mailed a day ago, has
+// not logged in since and can read a message nobody answered is mailed again.
+function remind(PDO $db, array $config, array $staff): void
+{
+    $mailed = query($db, 'SELECT staff_id FROM pending_notifications WHERE mailed_at <= ?', [now_hour() - DAY])
+        ->fetchAll(PDO::FETCH_COLUMN);
+    $due = array_filter($mailed, fn($id) => isset($staff[$id]) && awaits_answer($db, $id) && claim_mail($db, $id));
+    send_mail($config, $staff, $due, MAIL_REMINDER);
+}
+
+// Whether a mail to this person may go out now: none since their last login,
+// or the last one is a day old. Records the mail, so call it once per mail.
+function claim_mail(PDO $db, string $staffId): bool
+{
+    $claimed = query($db, 'INSERT INTO pending_notifications (staff_id, mailed_at) VALUES (?, ?)
+                           ON CONFLICT (staff_id) DO UPDATE SET mailed_at = excluded.mailed_at
+                           WHERE pending_notifications.mailed_at <= ?', [$staffId, now_hour(), now_hour() - DAY]);
+    return $claimed->rowCount() === 1;
+}
+
+// An open conversation they can read whose last message is the sender's.
+function awaits_answer(PDO $db, string $staffId): bool
+{
+    return (bool)query($db, "SELECT 1 FROM conversations c
+                             JOIN recipient_keys k ON k.conv_id = c.conv_id AND k.staff_id = ?
+                             WHERE c.status = 'open' AND ? =
+                                 (SELECT author FROM messages WHERE conv_id = c.conv_id ORDER BY seq DESC LIMIT 1)
+                             LIMIT 1", [$staffId, SENDER])->fetchColumn();
+}
+
 // Best effort: a failed notification must not fail the request, and staff see
 // new messages on the staff page anyway. Never put message content here.
-function notify(PDO $db, array $config, array $staff, array $staffIds, string $subject): void
+function send_mail(array $config, array $staff, array $staffIds, array $text): void
 {
-    // Past the hourly budget, one summary to everyone instead of a flood.
-    count_up($db, 'notify');
-    $sent = counter($db, 'notify');
-    $budget = $config['limits']['notifications_per_hour'];
-    if ($sent > $budget + 1) {
+    if (!$staffIds) {
         return;
     }
-    if ($sent === $budget + 1) {
-        $subject = 'Many new messages this hour';
-        $staffIds = array_keys($staff);
-    }
+    [$subject, $firstLine] = $text;
 
-    $body = "$subject.\n\nRead it at {$config['site_url']}staff\n\n"
+    $body = "$firstLine\n\nRead it at {$config['site_url']}staff\n\n"
+        . "Until you log in there you get no further mail, except a reminder every\n"
+        . "24 hours while a message waits for an answer.\n\n"
         . "This notification contains no message content.\n";
 
     $headers = [

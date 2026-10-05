@@ -80,7 +80,6 @@ const LIMITS = {
   conversation_bytes: 1000000,
   sender_messages_per_hour: 100,
   database_bytes: 1000000000,
-  notifications_per_hour: 1000,
 };
 
 function phpArray(obj) {
@@ -108,8 +107,19 @@ function dbQuery(sql) {
     `echo json_encode((new PDO('sqlite:${dir}/db.sqlite'))->query($argv[1])->fetchAll(PDO::FETCH_ASSOC));`, sql]).toString());
 }
 
-function mailCount(pattern) {
-  return readFileSync(join(dir, 'mail.log'), 'utf8').split(pattern).length - 1;
+const NEWS = 'New activity';
+const REMINDER = 'Reminder: a message waits for an answer';
+const HOURS = 3600;
+
+// Mails to one trusted person; their addresses are set up in before().
+function mailsTo(id, subject = '') {
+  const start = `To: ${id[0]}@example.org\r\nSubject: [Kummerkasten] ${subject}`;
+  return readFileSync(join(dir, 'mail.log'), 'utf8').replaceAll(/\r?\n/g, '\r\n').split(start).length - 1;
+}
+
+// As if every outstanding notification had been mailed this long ago.
+function ageNotifications(seconds) {
+  dbQuery(`UPDATE pending_notifications SET mailed_at = mailed_at - ${seconds}`);
 }
 
 function staffList(id, timestamp = now()) {
@@ -263,10 +273,10 @@ test('close needs a close signature; sender append reopens', async () => {
 
 test('notifications carry no content', () => {
   const mail = readFileSync(join(dir, 'mail.log'), 'utf8');
-  assert.match(mail, new RegExp(`New conversation #${publicId}`));
-  assert.match(mail, /To: h@example.org/);
+  assert.ok(mailsTo('hannah', NEWS) >= 1);
   assert.ok(!mail.includes(SECRET_TEXT));
   assert.ok(!mail.includes(sender.convId));
+  assert.ok(!mail.includes(String(publicId)));
 });
 
 test('database holds no plaintext', () => {
@@ -345,18 +355,22 @@ test('messages per conversation are capped', async () => {
   assert.equal((await api(appendRequest(c.convId, c.key, MESSAGE_LIMIT + 1, 'sender', c.sign))).status, 403);
 });
 
-test('sender messages notify at most once an hour until staff reply', async () => {
+test('a trusted person gets one mail, then none until they log in', async () => {
+  await staffList('hannah');
+  await staffList('gabriela');
+  const before = [mailsTo('hannah'), mailsTo('gabriela')];
+  const sent = () => [mailsTo('hannah') - before[0], mailsTo('gabriela') - before[1]];
+
   const c = await newConversation();
-  const count = () => readFileSync(join(dir, 'mail.log'), 'utf8')
-    .split(`Subject: [Kummerkasten] New message in conversation #${c.publicId}`).length - 1;
+  assert.deepEqual(sent(), [1, 1]);
 
   await api(appendRequest(c.convId, c.key, 2, 'sender', c.sign));
-  assert.equal(count(), 0);     // creation already notified this hour
+  await newConversation();
+  assert.deepEqual(sent(), [1, 1]);
 
-  await api(appendRequest(c.convId, c.key, 3, 'hannah', staff.hannah.sign));
-  await api(appendRequest(c.convId, c.key, 4, 'sender', c.sign));
-  await api(appendRequest(c.convId, c.key, 5, 'sender', c.sign));
-  assert.equal(count(), 2);     // one mail to each of the two staff
+  await staffList('hannah');
+  await api(appendRequest(c.convId, c.key, 3, 'sender', c.sign));
+  assert.deepEqual(sent(), [2, 1]);
 });
 
 function voteRequest(id, c, lastSeq, vote) {
@@ -487,25 +501,13 @@ test('the proof of work gets harder as new conversations pile up', async () => {
   }
 });
 
-test('notifications beyond the hourly budget become one summary mail', async () => {
-  const [{ value }] = dbQuery("SELECT value FROM counters WHERE name = 'notify' ORDER BY hour DESC LIMIT 1");
-  writeConfig({ limits: { notifications_per_hour: value } });
-  try {
-    const before = mailCount('Subject: [Kummerkasten] Many new messages');
-    const a = await newConversation();
-    const b = await newConversation();
-    assert.equal(mailCount('Subject: [Kummerkasten] Many new messages'), before + 2);   // once per staff
-    assert.equal(mailCount(`New conversation #${a.publicId}`) + mailCount(`New conversation #${b.publicId}`), 0);
-  } finally {
-    writeConfig();
-  }
-});
-
 test('marking as resolved tells the other trusted persons', async () => {
   const c = await newConversation();
+  await staffList('hannah');
+  await staffList('gabriela');
+  const before = [mailsTo('hannah'), mailsTo('gabriela')];
   assert.equal((await api(closeRequest('hannah', c.publicId, 1))).status, 200);
-  const log = readFileSync(join(dir, 'mail.log'), 'utf8');
-  assert.match(log, new RegExp(`To: g@example.org\r?\nSubject: \\[Kummerkasten\\] Conversation #${c.publicId} marked as resolved`));
+  assert.deepEqual([mailsTo('hannah'), mailsTo('gabriela')], [before[0], before[1] + 1]);
 });
 
 test('spent challenges keep only a coarse expiry', async () => {
@@ -566,12 +568,18 @@ test('after a key change, the current key takes over conversations sealed to the
 });
 
 test('a conversation for some trusted persons reaches only them', async () => {
+  await staffList('hannah');
+  await staffList('gabriela');
+  const before = [mailsTo('hannah'), mailsTo('gabriela')];
+  const sent = () => [mailsTo('hannah') - before[0], mailsTo('gabriela') - before[1]];
+
   const s = kk.deriveSender(kk.parseWords(kk.generateWords(kk.CODEWORD_WORDS)).words);
   const req = await createRequest(s);
   delete req.sealed_keys.gabriela;
   const { status, data } = await api(req);
   assert.equal(status, 200);
   const id = data.public_id;
+  assert.deepEqual(sent(), [1, 0]);
 
   assert.deepEqual((await api({ action: 'get', conv_id: s.convId })).data.recipients, ['hannah']);
   const hannahs = (await staffList('hannah')).data.conversations.find((c) => c.public_id === id);
@@ -579,11 +587,55 @@ test('a conversation for some trusted persons reaches only them', async () => {
   assert.equal((await staffList('gabriela')).data.conversations.find((c) => c.public_id === id), undefined);
   assert.equal((await api(appendRequest(s.convId, s.key, 2, 'gabriela', staff.gabriela.sign))).status, 403);
 
+  // Both logged in just above, so each would be mailed again.
   await api(appendRequest(s.convId, s.key, 2, 'hannah', staff.hannah.sign));
+  assert.deepEqual(sent(), [1, 0]);
   await api(appendRequest(s.convId, s.key, 3, 'sender', s.sign));
-  const log = readFileSync(join(dir, 'mail.log'), 'utf8');
-  const to = (subject) => [...log.matchAll(new RegExp(`To: (\\S+)\\r?\\nSubject: \\[Kummerkasten\\] ${subject}`, 'g'))].map((m) => m[1]);
-  assert.deepEqual(to(`New conversation #${id}`), ['h@example.org']);
-  assert.deepEqual(to(`New message in conversation #${id}`), ['h@example.org']);
-  assert.deepEqual(to(`New reply by a colleague in conversation #${id}`), []);
+  assert.deepEqual(sent(), [2, 0]);
+});
+
+test('a reminder follows a day later, while a message waits for an answer', async () => {
+  dbQuery("UPDATE conversations SET status = 'closed'");
+  await staffList('hannah');
+  await staffList('gabriela');
+  const c = await newConversation();
+  const before = [mailsTo('hannah', REMINDER), mailsTo('gabriela', REMINDER)];
+  const reminded = () => [mailsTo('hannah', REMINDER) - before[0], mailsTo('gabriela', REMINDER) - before[1]];
+
+  ageNotifications(22 * HOURS);
+  await api({ action: 'challenge' });
+  assert.deepEqual(reminded(), [0, 0]);
+
+  // A reminder must not show when the sender came back to look.
+  ageNotifications(3 * HOURS);
+  await api({ action: 'get', conv_id: c.convId });
+  assert.deepEqual(reminded(), [0, 0]);
+
+  await api({ action: 'challenge' });
+  assert.deepEqual(reminded(), [1, 1]);
+  await api({ action: 'challenge' });
+  assert.deepEqual(reminded(), [1, 1]);
+
+  // Logging in must not remind the person who just did.
+  ageNotifications(25 * HOURS);
+  await staffList('gabriela');
+  assert.deepEqual(reminded(), [2, 1]);
+
+  await api(appendRequest(c.convId, c.key, 2, 'gabriela', staff.gabriela.sign));
+  ageNotifications(25 * HOURS);
+  await api({ action: 'challenge' });
+  assert.deepEqual(reminded(), [2, 1]);     // answered, nothing waits
+});
+
+test('a day after the last mail, news is mailed again without a login', async () => {
+  await staffList('hannah');
+  const c = await newConversation();
+  const before = mailsTo('hannah', NEWS);
+
+  await api(appendRequest(c.convId, c.key, 2, 'sender', c.sign));
+  assert.equal(mailsTo('hannah', NEWS), before);
+
+  ageNotifications(25 * HOURS);
+  await api(appendRequest(c.convId, c.key, 3, 'gabriela', staff.gabriela.sign));
+  assert.equal(mailsTo('hannah', NEWS), before + 1);
 });

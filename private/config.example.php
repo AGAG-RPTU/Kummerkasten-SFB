@@ -30,7 +30,8 @@ return [
     'site_url' => 'https://example.org/kummerkasten/',
 
     // Notifications go to the addresses in keys.json and never contain
-    // message content.
+    // message content. A person gets one, then none until they log in,
+    // apart from a daily reminder while a message waits for an answer.
     'mail_from' => 'kummerkasten@example.org',
 
     // Optional ntfy topic URL (https://ntfy.sh/<unguessable-topic>) for push
@@ -48,6 +49,5 @@ return [
         'conversation_bytes' => 1000000,        // ciphertext per conversation
         'sender_messages_per_hour' => 20,       // per conversation
         'database_bytes' => 200000000,          // senders are refused beyond this
-        'notifications_per_hour' => 30,         // then one summary mail
     ],
 ];

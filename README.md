@@ -74,7 +74,7 @@ Host checklist (the RPTU web hosting, the current host, meets all of these):
 - PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`), plus `curl` if
   `ntfy_url` is used.
 - No database server: the data is one SQLite file in `private/data/`, which
-  PHP reads itself. No cron, Node or Composer on the host either.
+  PHP reads itself. No Node or Composer on the host either; cron is optional.
 - Apache 2.4 with HTTPS and `.htaccess` support for `mod_headers` and
   `mod_rewrite`. A proxy that ends TLS in front of it must send
   `X-Forwarded-Proto`, or the redirect to HTTPS loops.
@@ -125,8 +125,6 @@ Open while `PREVIEW` in `public/js/site.js` keeps the warning banner on:
 
 - The data protection officer reviews `pages/privacy.html` and
   `pages/imprint.html`.
-- The RHRZ confirms that the web hosting logs what RPTU's privacy statement
-  says; section 3 of the privacy page relies on it.
 - The test entries leave `public/keys.json`.
 
 Changing trusted persons: a person added later cannot read or act on
@@ -167,10 +165,11 @@ resolved), then none until they log in on `/staff`, so a flood of messages
 is one mail each. While a message waits for an answer and they have not
 logged in, a reminder follows every 24 hours. Without cron, reminders go out
 with the next API request that is not a sender reading or deleting, such as
-someone opening `/write`. For punctual ones, schedule an hourly
+someone opening `/write`. For punctual ones, cron on the host sends a request
+every hour at minute 31, just after the stored hour changes:
 
 ```sh
-curl -s -X POST -d '{"action":"challenge"}' https://…/api.php
+curl -fsS -m 60 -o /dev/null -X POST -d '{"action":"challenge"}' https://…/api.php
 ```
 
 ## License

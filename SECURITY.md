@@ -46,9 +46,10 @@ code. The website links here from its footer and its privacy section.
   a conversation is encrypted for, and which of them replies. So whoever can
   see the database also sees that a conversation leaves someone out, though
   not what it is about; a trusted person who also runs the server sees that
-  about themselves. RPTU's web servers log every request with its exact time
-  and, at least for failed requests, the IP address, for seven days; combined
-  with the database, such logs can link an IP address to a conversation. A notification email can go out at
+  about themselves. RPTU's web servers log the exact time of every request,
+  but the IP address only when a request fails, is redirected or comes from a
+  bot; error logs are kept for seven days. A failed request can thus link an
+  IP address to a conversation. A notification email can go out at
   once and then shows the exact time a message arrived. For strong anonymity,
   use the Tor Browser.
 - **Loss of a codeword or passphrase.** Whoever has a codeword can read, write

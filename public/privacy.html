@@ -32,11 +32,10 @@
 <h2>2. Datenschutzbeauftragte</h2>
 <p>Die Datenschutzbeauftragte der RPTU, Postfach 3049, 67653 Kaiserslautern, datenschutz(at)rptu.de.</p>
 
-<h2>3. Hosting und Zugriffsprotokolle</h2>
-<!-- TODO(hosting): netcup is a temporary host. When moving, replace this
-     paragraph with the new host (and, in privacy.html, its log retention).
-     tools/deploy.sh warns while netcup is still named here. -->
-<p>Die Seite wird bei der netcup GmbH, Emmy-Noether-Straße 10, 76131 Karlsruhe, als Auftragsverarbeiter betrieben. Deren Webserver protokolliert bei jedem Aufruf die IP-Adresse, Datum und Uhrzeit, die aufgerufene Adresse, den Statuscode, die übertragene Datenmenge, die zuvor besuchte Seite (sofern der Browser sie übermittelt) und die Browserkennung. Zweck ist der sichere Betrieb der Seite; Rechtsgrundlage ist Art. 6 Abs. 1 lit. e DSGVO. Die Protokolle werden nach etwa 15 Tagen gelöscht. Die Anwendung selbst speichert keine IP-Adressen.</p>
+<h2>3. Hosting und Protokolle</h2>
+<!-- Describes the RPTU web hosting. Rewrite it when the site moves; see
+     README, "Moving to another host". -->
+<p>Die Seite läuft auf Servern der RPTU, die deren Rechenzentrum (RHRZ) betreibt; ein externer Dienstleister ist nicht beteiligt. Nach der <a href="https://rptu.de/datenschutzerklaerung">Datenschutzerklärung der RPTU</a> protokollieren diese Server bei jedem Aufruf Datum und Uhrzeit, die aufgerufene Adresse, die zuvor besuchte Seite (sofern der Browser sie übermittelt) und die Browserkennung; schlägt ein Aufruf fehl, zusätzlich die Art des Fehlers und die IP-Adresse. Zweck ist der sichere Betrieb der Seite; Rechtsgrundlage ist Art. 6 Abs. 1 lit. e DSGVO. Die Protokolle werden nach sieben Tagen gelöscht. Die Anwendung selbst speichert keine IP-Adressen.</p>
 
 <h2>4. Nachrichten</h2>
 <p>Kategorie, Betreff, Text und die freiwilligen Angaben zu Name und Kontakt werden in deinem Browser verschlüsselt. Entschlüsseln können sie nur du, mit deinem Codewort, und die Vertrauenspersonen, die du beim Schreiben ausgewählt hast; der Betreiber des Servers kann es nicht.</p>
@@ -44,7 +43,7 @@
 <p>Rechtsgrundlage ist deine Einwilligung (Art. 6 Abs. 1 lit. a DSGVO), die du durch das Absenden erteilst; enthält deine Nachricht besondere Kategorien personenbezogener Daten, etwa zur Gesundheit, zusätzlich Art. 9 Abs. 2 lit. a DSGVO. Du kannst die Einwilligung jederzeit widerrufen, indem du die Unterhaltung löschst.</p>
 
 <h2>5. Speicherdauer</h2>
-<p>Unterhaltungen werden automatisch gelöscht: 30 Tage, nachdem die Vertrauenspersonen sie als erledigt markiert haben, spätestens aber 365 Tage nach der letzten Nachricht. Mit deinem Codewort kannst du deine Unterhaltung jederzeit selbst löschen; die Vertrauenspersonen können sie gemeinsam löschen. Datensicherungen des Hosters können die verschlüsselten Daten noch für begrenzte Zeit enthalten.</p>
+<p>Unterhaltungen werden automatisch gelöscht: 30 Tage, nachdem die Vertrauenspersonen sie als erledigt markiert haben, spätestens aber 365 Tage nach der letzten Nachricht. Mit deinem Codewort kannst du deine Unterhaltung jederzeit selbst löschen; die Vertrauenspersonen können sie gemeinsam löschen. Datensicherungen der RPTU können die verschlüsselten Daten noch einige Wochen enthalten.</p>
 
 <h2>6. Benachrichtigungen</h2>
 <p>Die Vertrauenspersonen werden per E-Mail über neue Nachrichten informiert. Diese E-Mails enthalten keinen Inhalt und nennen keine Unterhaltung. Nach einer E-Mail erhält eine Vertrauensperson erst wieder eine, wenn sie sich angemeldet hat, sonst höchstens eine Erinnerung pro Tag. Eine E-Mail kann sofort verschickt werden; ihr Zeitstempel zeigt dann minutengenau, wann eine Nachricht einging.</p>
@@ -73,11 +72,10 @@
 <h2>2. Data protection officer</h2>
 <p>The data protection officer of RPTU, Postfach 3049, 67653 Kaiserslautern, Germany, datenschutz(at)rptu.de.</p>
 
-<h2>3. Hosting and access logs</h2>
-<!-- TODO(hosting): netcup is a temporary host. When moving, replace this
-     paragraph with the new host (and, in privacy.html, its log retention).
-     tools/deploy.sh warns while netcup is still named here. -->
-<p>The site is hosted by netcup GmbH, Emmy-Noether-Straße 10, 76131 Karlsruhe, Germany, as a processor. Their web server logs, for every request, the IP address, date and time, the requested address, the status code, the amount of data transferred, the previously visited page (if the browser sends it) and the browser identification. The purpose is secure operation of the site; the legal basis is Art. 6(1)(e) GDPR. The logs are deleted after about 15 days. The application itself stores no IP addresses.</p>
+<h2>3. Hosting and logs</h2>
+<!-- Describes the RPTU web hosting. Rewrite it when the site moves; see
+     README, "Moving to another host". -->
+<p>The site runs on servers of RPTU, operated by its computing centre (RHRZ); no external provider is involved. According to <a href="https://rptu.de/datenschutzerklaerung">RPTU's privacy statement</a> (in German), these servers log, for every request, date and time, the requested address, the previously visited page (if the browser sends it) and the browser identification; if a request fails, also the kind of error and the IP address. The purpose is secure operation of the site; the legal basis is Art. 6(1)(e) GDPR. The logs are deleted after seven days. The application itself stores no IP addresses.</p>
 
 <h2>4. Messages</h2>
 <p>Category, subject, text and the optional name and contact details are encrypted in your browser. Only you, with your codeword, and the trusted persons you chose when writing can decrypt them; whoever runs the server cannot.</p>
@@ -85,7 +83,7 @@
 <p>The legal basis is your consent (Art. 6(1)(a) GDPR), which you give by sending; if your message contains special categories of personal data, such as health data, also Art. 9(2)(a) GDPR. You can withdraw your consent at any time by deleting the conversation.</p>
 
 <h2>5. Retention</h2>
-<p>Conversations are deleted automatically: 30 days after the trusted persons marked them as resolved, and at the latest 365 days after the last message. With your codeword you can delete your conversation yourself at any time; the trusted persons can delete it jointly. The hosting provider's backups may contain the encrypted data for a limited time.</p>
+<p>Conversations are deleted automatically: 30 days after the trusted persons marked them as resolved, and at the latest 365 days after the last message. With your codeword you can delete your conversation yourself at any time; the trusted persons can delete it jointly. RPTU's backups may contain the encrypted data for some weeks longer.</p>
 
 <h2>6. Notifications</h2>
 <p>The trusted persons are informed about new messages by email. These emails contain no content and name no conversation. After one email, a trusted person gets the next only once they have logged in, otherwise at most one reminder a day. An email can be sent at once; its timestamp then shows to the minute when a message arrived.</p>

@@ -2,8 +2,8 @@
 # Check that a deployed Kummerkasten serves exactly the files of a published
 # commit: every page, script, stylesheet, image and keys.json, byte for byte.
 #
-#   tools/verify.sh https://kummerkasten.coxeter.de/            # the commit the site names
-#   tools/verify.sh https://kummerkasten.coxeter.de/ <commit>   # a given commit
+#   tools/verify.sh https://kummerkasten.computeralgebra.de/            # the commit the site names
+#   tools/verify.sh https://kummerkasten.computeralgebra.de/ <commit>   # a given commit
 #   tools/verify.sh --digest [<commit>]                          # a commit's digest, offline
 #
 # On success it prints one digest over all files, which anyone can recompute

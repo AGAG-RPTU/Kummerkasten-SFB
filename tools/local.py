@@ -8,7 +8,7 @@ codeword. Needs only Python 3.
 
     git clone https://github.com/AGAG-RPTU/Kummerkasten-SFB
     cd Kummerkasten-SFB
-    tools/local.py https://kummerkasten.coxeter.de/
+    tools/local.py https://kummerkasten.computeralgebra.de/
     # then open http://localhost:8770/staff (or /write, /conversation)
 """
 
@@ -99,7 +99,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('site', help='address of the Kummerkasten, e.g. https://kummerkasten.coxeter.de/')
+    parser.add_argument('site', help='address of the Kummerkasten, e.g. https://kummerkasten.computeralgebra.de/')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT)
     args = parser.parse_args()
 

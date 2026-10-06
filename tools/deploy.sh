@@ -5,8 +5,8 @@
 # access. With --beside it goes next to the webroot instead, out of reach of
 # the web server, for hosts where PHP may read there. config.php and the
 # database on the host are left alone.
-#   tools/deploy.sh netcup /kummerkasten.coxeter.de/httpdocs [git-ref]
-#   tools/deploy.sh --beside kummerkasten-www /srv/www/www-math-coal-ku/data/http [git-ref]
+#   tools/deploy.sh [--beside] SSH_HOST WEBROOT [GIT_REF]
+#   tools/deploy.sh --beside kummerkasten-www /srv/www/www-math-coal-ku/data/http
 set -eu
 
 usage="usage: $0 [--beside] SSH_HOST WEBROOT [GIT_REF]"
@@ -61,14 +61,3 @@ prune "$tmp/public" "$root" "! -path './private/*' ! -path './.well-known/*'"
 prune "$tmp/private" "$private" "! -path ./config.php ! -path './data/*'"
 
 echo "deployed $(git rev-parse --short "$ref") to $host:$root"
-
-# netcup is a temporary host; the legal pages must name the real one.
-if [ "$host" != netcup ] && grep -q 'netcup GmbH' public/imprint.html public/privacy.html; then
-    cat >&2 <<'WARN'
-
-  ************************************************************************
-  TODO(hosting): imprint.html and privacy.html still name netcup GmbH as
-  host. Update them for this host (see README, "Moving to another host").
-  ************************************************************************
-WARN
-fi

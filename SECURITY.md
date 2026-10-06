@@ -46,9 +46,9 @@ code. The website links here from its footer and its privacy section.
   a conversation is encrypted for, and which of them replies. So whoever can
   see the database also sees that a conversation leaves someone out, though
   not what it is about; a trusted person who also runs the server sees that
-  about themselves. The hosting provider's web server logs record IP addresses
-  and exact times for about 15 days; combined with the database, they can
-  link an IP address to a conversation. A notification email can go out at
+  about themselves. RPTU's web servers log every request with its exact time
+  and, at least for failed requests, the IP address, for seven days; combined
+  with the database, such logs can link an IP address to a conversation. A notification email can go out at
   once and then shows the exact time a message arrived. For strong anonymity,
   use the Tor Browser.
 - **Loss of a codeword or passphrase.** Whoever has a codeword can read, write
@@ -70,7 +70,7 @@ To check that the site delivers exactly that commit:
 ```sh
 git clone https://github.com/AGAG-RPTU/Kummerkasten-SFB
 cd Kummerkasten-SFB
-tools/verify.sh https://kummerkasten.coxeter.de/
+tools/verify.sh https://kummerkasten.computeralgebra.de/
 ```
 
 It fetches every file a browser loads (pages, scripts, the stylesheet, the
@@ -95,7 +95,7 @@ server's JavaScript altogether:
 git clone https://github.com/AGAG-RPTU/Kummerkasten-SFB
 cd Kummerkasten-SFB
 git log -1               # inspect or verify what you run
-tools/local.py https://kummerkasten.coxeter.de/
+tools/local.py https://kummerkasten.computeralgebra.de/
 ```
 
 Then open <http://localhost:8770/staff>. Pages, scripts and `keys.json` come

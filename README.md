@@ -3,7 +3,7 @@
 A contact form for members of the SFB-TRR 195 to reach the trusted persons
 (Vertrauenspersonen), anonymously or by name. Senders receive a six-word
 codeword and use it to return, read replies and answer. Live at
-<https://kummerkasten.coxeter.de/>.
+<https://kummerkasten.computeralgebra.de/>.
 
 Messages are encrypted in the browser. The server stores ciphertext only;
 neither its operator nor a stolen database reveals content.
@@ -12,8 +12,8 @@ neither its operator nor a stolen database reveals content.
 not protected, and how to check that the site runs the published code:
 
 ```sh
-tools/verify.sh https://kummerkasten.coxeter.de/     # does the site serve the commit it names?
-tools/local.py https://kummerkasten.coxeter.de/      # use the site from this checkout instead
+tools/verify.sh https://kummerkasten.computeralgebra.de/     # does the site serve the commit it names?
+tools/local.py https://kummerkasten.computeralgebra.de/      # use the site from this checkout instead
 ```
 
 ## How it works
@@ -69,8 +69,7 @@ committed, and `npm test` fails if they are stale.
 
 ## Deployment
 
-Host checklist (netcup, the current host, and the RPTU web hosting meet all
-of these):
+Host checklist (the RPTU web hosting, the current host, meets all of these):
 
 - PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`), plus `curl` if
   `ntfy_url` is used.
@@ -112,13 +111,23 @@ Steps:
    addresses are public there, like the names.
 4. `tools/verify.sh https://…/` must end with `All files match`.
 
-Moving to another host (**TODO**: netcup is a stopgap until RHRZ hosting):
+Moving to another host:
 
-- Update the hosting paragraphs in `pages/imprint.html` and
-  `pages/privacy.html` (marked `TODO(hosting)`): provider, address, log
-  retention, and whether a processing agreement applies.
-- Switch off web statistics built from access logs, as done in Plesk.
-- `tools/deploy.sh` warns while the legal pages still name netcup.
+- Rewrite the hosting paragraphs in `pages/imprint.html` and
+  `pages/privacy.html` (a comment marks them): who hosts, what the servers
+  log and for how long, how long backups last, and whether a processing
+  agreement applies.
+- Switch off web statistics built from access logs.
+- Replace the site's address in this file, `SECURITY.md` and the usage texts
+  of `tools/verify.sh` and `tools/local.py`.
+
+Open while `PREVIEW` in `public/js/site.js` keeps the warning banner on:
+
+- The data protection officer reviews `pages/privacy.html` and
+  `pages/imprint.html`.
+- The RHRZ confirms that the web hosting logs what RPTU's privacy statement
+  says; section 3 of the privacy page relies on it.
+- The test entries leave `public/keys.json`.
 
 Changing trusted persons: a person added later cannot read or act on
 conversations that started before. Removing someone from `keys.json` stops

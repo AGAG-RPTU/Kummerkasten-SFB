@@ -125,7 +125,6 @@ Open while `PREVIEW` in `public/js/site.js` keeps the warning banner on:
 
 - The data protection officer reviews `pages/privacy.html` and
   `pages/imprint.html`.
-- The test entries leave `public/keys.json`.
 
 Changing trusted persons: a person added later cannot read or act on
 conversations that started before. Removing someone from `keys.json` stops

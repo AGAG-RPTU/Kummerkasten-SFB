@@ -4,7 +4,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -86,10 +86,10 @@ function phpArray(obj) {
   return `[${Object.entries(obj).map(([k, v]) => `'${k}' => ${v}`).join(', ')}]`;
 }
 
-function writeConfig({ password = true, limits = {}, pow = {} } = {}) {
+function writeConfig({ password = true, limits = {}, pow = {}, keysFile = `${dir}/keys.json` } = {}) {
   writeFileSync(join(dir, 'config.php'), `<?php return [
     'db' => '${dir}/db.sqlite',
-    'keys_file' => '${dir}/keys.json',
+    'keys_file' => '${keysFile}',
     'password_hash' => ${password ? `'${passwordHash}'` : 'null'},
     'pow' => ${phpArray({ ...POW, step: 1000, ...pow })},
     'pow_secret' => '${POW_SECRET}',
@@ -645,4 +645,32 @@ test('a day after the last mail, news is mailed again without a login', async ()
   ageNotifications(25 * HOURS);
   await api(appendRequest(c.convId, c.key, 3, 'gabriela', staff.gabriela.sign));
   assert.equal(mailsTo('hannah', NEWS), before + 1);
+});
+
+// The web server's error log would add the visitor's IP address and the exact time.
+test('errors go to a log of our own, without address or exact time, for a week', async () => {
+  const day = (daysAgo) => new Date(Date.now() - daysAgo * 24 * HOURS * 1000).toISOString().slice(0, 10);
+  writeFileSync(join(dir, `error-${day(9)}.log`), 'old\n');
+  writeFileSync(join(dir, `error-${day(5)}.log`), 'recent\n');
+
+  writeConfig({ keysFile: join(dir, 'missing.json') });
+  try {
+    const { status, data } = await api({ action: 'challenge' });
+    assert.equal(status, 500);
+    assert.deepEqual(data, { error: 'internal error' });
+  } finally {
+    writeConfig();
+  }
+
+  const logs = readdirSync(dir).filter((name) => /^error-.*\.log$/.test(name));
+  assert.ok(!logs.includes(`error-${day(9)}.log`));
+  assert.ok(logs.includes(`error-${day(5)}.log`));
+
+  const lines = logs.filter((name) => name > `error-${day(5)}.log`)
+    .flatMap((name) => readFileSync(join(dir, name), 'utf8').trim().split('\n'));
+  assert.ok(lines.some((line) => line.includes('missing.json')));
+  for (const line of lines) {
+    assert.match(line, /^\d{4}-\d\d-\d\d \d\d:00 UTC /);
+    assert.ok(!line.includes('127.0.0.1'));
+  }
 });

@@ -44,6 +44,7 @@ return [
     'retention' => [
         'closed_days' => 30,        // after staff closed the conversation
         'inactive_days' => 365,     // since the last message
+        'error_log_days' => 7,      // error-<date>.log next to the database
     ],
 
     'limits' => [

@@ -152,6 +152,10 @@ conversation at any time. Trusted persons delete only unanimously: each votes,
 the last missing vote deletes, and any new message clears the votes. Only
 people in `keys.json` who hold the conversation's key count.
 
+Errors go to `error-<date>.log` next to the database for `error_log_days`,
+with the hour only and no IP address; PHP's own log, the web server's, would
+add the address and the exact time to every line.
+
 Abuse limits (`limits` and `pow` in `config.php`, defaults in `app.php`):
 every `step` new conversations in an hour make the proof of work twice as
 hard, with a hard cap behind it; per conversation, a maximum number of

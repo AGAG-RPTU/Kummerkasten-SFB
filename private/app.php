@@ -42,7 +42,7 @@ const DEFAULT_CONFIG = [
     'password_hash' => null,
     'ntfy_url' => null,
     'pow' => ['bits' => 17, 'count' => 16, 'ttl' => 3600, 'step' => 5],
-    'retention' => ['closed_days' => 30, 'inactive_days' => 365],
+    'retention' => ['closed_days' => 30, 'inactive_days' => 365, 'error_log_days' => 7],
     'limits' => [
         'creates_per_hour' => 100,
         'messages_per_conversation' => 200,
@@ -58,7 +58,7 @@ final class HttpError extends Exception
 
 function run(string $privateDir): void
 {
-    ini_set('display_errors', '0');     // errors go to the log, never to the client
+    ini_set('display_errors', '0');     // errors go to a log, never to the client
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
 
@@ -76,6 +76,7 @@ function run(string $privateDir): void
         }
 
         $config = array_replace_recursive(DEFAULT_CONFIG, require getenv('KK_CONFIG') ?: $privateDir . '/config.php');
+        keep_own_error_log(dirname($config['db']), $config['retention']['error_log_days']);
         $db = open_db($config['db'], $privateDir . '/schema.sql');
         expire($db, $config['retention']);
         $staff = load_staff($config['keys_file']);
@@ -102,7 +103,7 @@ function run(string $privateDir): void
     } catch (HttpError $e) {
         respond($e->getCode(), ['error' => $e->getMessage()]);
     } catch (Throwable $e) {
-        error_log('kummerkasten: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        log_error($e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         respond(HTTP_INTERNAL_ERROR, ['error' => 'internal error']);
     }
 }
@@ -737,6 +738,69 @@ function unb64(string $text): string
     return base64_decode($text, true);
 }
 
+// ------------------------------------------------------------------ error log
+
+const FATAL_ERRORS = E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR;
+
+// PHP's own log is the web server's error log, which puts the visitor's IP
+// address and the exact time on every line. From here on errors go to a
+// daily file in $dir instead, kept for $days days. Before the config is
+// read there is no $dir, and errors still go to PHP's log.
+function keep_own_error_log(string $dir, int $days): void
+{
+    error_log_dir($dir);
+    ini_set('log_errors', '0');
+
+    set_error_handler(function (int $level, string $message, string $file, int $line): bool {
+        if (error_reporting() & $level) {       // not silenced with @
+            log_error("$message at $file:$line");
+        }
+        return true;
+    });
+
+    // Fatal errors never reach the handler above.
+    register_shutdown_function(function (): void {
+        $last = error_get_last();
+        if ($last !== null && $last['type'] & FATAL_ERRORS) {
+            log_error("{$last['message']} at {$last['file']}:{$last['line']}");
+        }
+    });
+
+    // The dates in the names sort like the names.
+    $oldest = error_log_file($dir, time() - $days * DAY);
+    foreach (glob("$dir/error-*.log") ?: [] as $file) {
+        if ($file < $oldest) {
+            unlink($file);
+        }
+    }
+}
+
+// The time is rounded like every stored time, so a line does not say when
+// exactly someone wrote.
+function log_error(string $message): void
+{
+    $dir = error_log_dir();
+    if ($dir === null) {
+        error_log("kummerkasten: $message");
+        return;
+    }
+    $line = gmdate('Y-m-d H:i', now_hour()) . " UTC $message\n";
+    @file_put_contents(error_log_file($dir, now_hour()), $line, FILE_APPEND | LOCK_EX);
+}
+
+function error_log_file(string $dir, int $time): string
+{
+    return "$dir/error-" . gmdate('Y-m-d', $time) . '.log';
+}
+
+// Where log_error() writes; null until keep_own_error_log() has set it.
+function error_log_dir(?string $set = null): ?string
+{
+    static $dir = null;
+    $dir = $set ?? $dir;
+    return $dir;
+}
+
 // ------------------------------------------------------------------ notifications
 
 // [subject, first line of the mail]
@@ -807,7 +871,7 @@ function send_mail(array $config, array $staff, array $staffIds, array $text): v
     foreach ($staffIds as $id) {
         $to = $staff[$id]['email'];
         if ($to !== null && !@mail($to, "[Kummerkasten] $subject", $body, $headers, $sender)) {
-            error_log("kummerkasten: mail to staff '$id' failed");
+            log_error("mail to staff '$id' failed");
         }
     }
 
@@ -821,7 +885,7 @@ function send_mail(array $config, array $staff, array $staffIds, array $text): v
             CURLOPT_TIMEOUT => 5,
         ]);
         if (curl_exec($ch) === false) {
-            error_log('kummerkasten: ntfy failed: ' . curl_error($ch));
+            log_error('ntfy failed: ' . curl_error($ch));
         }
     }
 }

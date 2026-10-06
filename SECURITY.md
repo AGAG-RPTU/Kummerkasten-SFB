@@ -47,9 +47,9 @@ code. The website links here from its footer and its privacy section.
   see the database also sees that a conversation leaves someone out, though
   not what it is about; a trusted person who also runs the server sees that
   about themselves. RPTU's web servers log the exact time of every request,
-  but the IP address only when a request fails, is redirected or comes from a
-  bot; error logs are kept for seven days. A failed request can thus link an
-  IP address to a conversation. A notification email can go out at
+  but the IP address only when they fail or refuse a request, redirect it, or
+  it comes from a bot; their error logs are kept for seven days. Errors of
+  the application itself go to a log of its own, without address. A notification email can go out at
   once and then shows the exact time a message arrived. For strong anonymity,
   use the Tor Browser.
 - **Loss of a codeword or passphrase.** Whoever has a codeword can read, write
@@ -183,6 +183,7 @@ designed to fit it: static files only, no inline scripts, a strict CSP.
 | Proof of work | a spent challenge's random identifier until about an hour after it expired |
 | Counters | how many conversations this hour, site-wide |
 | Notifications | per trusted person, the hour of the last notification mail, until they log in |
+| Error log | the application's error messages with the hour, no IP address, for seven days |
 
 Tables are stored in key order, not insertion order. Conversations are deleted
 30 days after being marked resolved and at the latest 365 days after the last

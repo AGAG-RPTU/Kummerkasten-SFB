@@ -801,9 +801,12 @@ function send_mail(array $config, array $staff, array $staffIds, array $text): v
         'Content-Type' => 'text/plain; charset=UTF-8',
         'Auto-Submitted' => 'auto-generated',
     ];
+    // -f sets the envelope sender. PHP's default, user@hostname, is no valid
+    // address on most hosts, and mail servers then refuse the mail.
+    $sender = '-f' . $config['mail_from'];
     foreach ($staffIds as $id) {
         $to = $staff[$id]['email'];
-        if ($to !== null && !@mail($to, "[Kummerkasten] $subject", $body, $headers)) {
+        if ($to !== null && !@mail($to, "[Kummerkasten] $subject", $body, $headers, $sender)) {
             error_log("kummerkasten: mail to staff '$id' failed");
         }
     }

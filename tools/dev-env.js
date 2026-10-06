@@ -44,4 +44,5 @@ SFB access password: ${PASSWORD}
 ${STAFF.map((s) => `${s.id}: ${s.passphrase}`).join('\n')}
 
 Start (mail is written to ${DIR}mail.log):
-  KK_CONFIG=${DIR}config.php php -d 'sendmail_path=cat >> ${DIR}mail.log' -S localhost:8765 -t public tools/dev-router.php`);
+  KK_CONFIG=${DIR}config.php KK_MAIL_LOG=${DIR}mail.log \\
+    php -d sendmail_path=$PWD/tools/dev-sendmail.sh -S localhost:8765 -t public tools/dev-router.php`);

@@ -1,5 +1,5 @@
 // Runs the PHP API under `php -S` with a throwaway config and database. Mail goes to
-// a file via sendmail_path, so nothing leaves the machine.
+// a file via tools/dev-sendmail.sh, so nothing leaves the machine.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -150,8 +150,8 @@ before(async () => {
   const port = 18000 + Math.floor(Math.random() * 1000);
   url = `http://127.0.0.1:${port}/api.php`;
   // opcache would keep serving a rewritten config.php
-  server = spawn('php', ['-d', 'opcache.enable=0', '-d', `sendmail_path=cat >> ${dir}/mail.log`, '-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')], {
-    env: { ...process.env, KK_CONFIG: join(dir, 'config.php') },
+  server = spawn('php', ['-d', 'opcache.enable=0', '-d', `sendmail_path=${ROOT}tools/dev-sendmail.sh`, '-S', `127.0.0.1:${port}`, '-t', join(ROOT, 'public')], {
+    env: { ...process.env, KK_CONFIG: join(dir, 'config.php'), KK_MAIL_LOG: join(dir, 'mail.log') },
     stdio: 'ignore',
   });
   for (let i = 0; i < 50; i++) {
@@ -277,6 +277,13 @@ test('notifications carry no content', () => {
   assert.ok(!mail.includes(SECRET_TEXT));
   assert.ok(!mail.includes(sender.convId));
   assert.ok(!mail.includes(String(publicId)));
+});
+
+// Hosts refuse mail whose envelope sender is PHP's default, user@hostname.
+test('mail goes out with mail_from as envelope sender', () => {
+  const mail = readFileSync(join(dir, 'mail.log'), 'utf8');
+  assert.match(mail, /^Sendmail-Args: -fkk@example\.org$/m);
+  assert.match(mail, /^From: kk@example\.org\r?$/m);
 });
 
 test('database holds no plaintext', () => {

@@ -6,7 +6,10 @@ AddDefaultCharset utf-8
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    # Behind a proxy that ends TLS, Apache itself never sees HTTPS; the proxy
+    # says in X-Forwarded-Proto what the visitor used.
     RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !=https
     RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
     # Clean URLs: /write serves write.html. Old .html addresses redirect

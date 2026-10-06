@@ -7,7 +7,8 @@ return [
     'db' => __DIR__ . '/data/kummerkasten.sqlite',
 
     // Trusted persons: public keys and notification addresses (in git, see
-    // README). tools/deploy.sh puts private/ inside the webroot, next to it.
+    // README), in the webroot. This path fits private/ inside the webroot;
+    // after tools/deploy.sh --beside it is __DIR__ . '/../<webroot>/keys.json'.
     'keys_file' => __DIR__ . '/../keys.json',
 
     // SFB access password for starting a conversation, or null for none
@@ -32,6 +33,8 @@ return [
     // Notifications go to the addresses in keys.json and never contain
     // message content. A person gets one, then none until they log in,
     // apart from a daily reminder while a message waits for an answer.
+    // mail_from is the From header and the envelope sender: a bare address
+    // that exists and that this host may send as.
     'mail_from' => 'kummerkasten@example.org',
 
     // Optional ntfy topic URL (https://ntfy.sh/<unguessable-topic>) for push

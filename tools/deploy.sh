@@ -1,41 +1,64 @@
 #!/bin/sh
 # Copy a committed git revision to a host over ssh. public/ becomes the
-# webroot and private/ goes to <webroot>/private, because shared hosts often
+# webroot. private/ goes to <webroot>/private, because shared hosts often
 # confine PHP to the webroot via open_basedir; private/.htaccess denies web
-# access. config.php and the database on the host are left alone.
+# access. With --beside it goes next to the webroot instead, out of reach of
+# the web server, for hosts where PHP may read there. config.php and the
+# database on the host are left alone.
 #   tools/deploy.sh netcup /kummerkasten.coxeter.de/httpdocs [git-ref]
+#   tools/deploy.sh --beside kummerkasten-www /srv/www/www-math-coal-ku/data/http [git-ref]
 set -eu
 
-host=${1:?usage: $0 SSH_HOST WEBROOT [GIT_REF]}
-root=${2:?usage: $0 SSH_HOST WEBROOT [GIT_REF]}
+usage="usage: $0 [--beside] SSH_HOST WEBROOT [GIT_REF]"
+beside=
+if [ "${1:-}" = --beside ]; then
+    beside=1
+    shift
+fi
+host=${1:?$usage}
+root=${2:?$usage}
 ref=${3:-HEAD}
+private=$root/private
+if [ -n "$beside" ]; then
+    private=$(dirname "$root")/private
+fi
 
 cd "$(dirname "$0")/.."
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 
 git archive "$ref" public private | tar xf - -C "$tmp"
-mv "$tmp/private" "$tmp/public/private"
-mkdir "$tmp/public/private/data"
+mkdir "$tmp/private/data"
 git rev-parse "$ref^{commit}" > "$tmp/public/version.txt"     # full hash; the footer links it
 
-# List the entries instead of '.', so the webroot keeps its own mode
-cd "$tmp/public"
-COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -czf - $(ls -A) |
-    ssh "$host" "tar xzf - -C '$root' && chmod 700 '$root/private/data'"
-cd - >/dev/null
+# send LOCAL_DIR REMOTE_DIR: copies the entries instead of '.', so the remote
+# directory keeps its own mode.
+send() {
+    (cd "$1" && COPYFILE_DISABLE=1 tar --no-xattrs --no-mac-metadata -czf - $(ls -A)) |
+        ssh "$host" "mkdir -p '$2' && tar xzf - -C '$2'"
+}
 
-# Remove what earlier deploys left behind and git no longer has, so the site
-# is exactly this revision. config.php, the database and Let's Encrypt
-# challenges stay. Deployed file names contain no spaces.
-(cd "$tmp/public" && find . -type f | sed 's|^\./||') | LC_ALL=C sort > "$tmp/deployed.txt"
-ssh "$host" "cd '$root' && find . -type f ! -path ./private/config.php ! -path './private/data/*' ! -path './.well-known/*'" |
-    sed 's|^\./||' | LC_ALL=C sort | LC_ALL=C comm -23 - "$tmp/deployed.txt" > "$tmp/stale.txt"
-if [ -s "$tmp/stale.txt" ]; then
-    echo "removing files not in $ref:"
-    sed 's/^/  /' "$tmp/stale.txt"
-    ssh "$host" "cd '$root' && xargs rm -f --" < "$tmp/stale.txt"
-fi
+# prune LOCAL_DIR REMOTE_DIR KEEP: removes what earlier deploys left behind
+# and git no longer has, so the site is exactly this revision. KEEP is a find
+# expression for what stays. Deployed file names contain no spaces.
+prune() {
+    (cd "$1" && find . -type f | sed 's|^\./||') | LC_ALL=C sort > "$tmp/deployed.txt"
+    ssh "$host" "cd '$2' && find . -type f $3" |
+        sed 's|^\./||' | LC_ALL=C sort | LC_ALL=C comm -23 - "$tmp/deployed.txt" > "$tmp/stale.txt"
+    if [ -s "$tmp/stale.txt" ]; then
+        echo "removing files in $2 not in $ref:"
+        sed 's/^/  /' "$tmp/stale.txt"
+        ssh "$host" "cd '$2' && xargs rm -f --" < "$tmp/stale.txt"
+    fi
+}
+
+send "$tmp/public" "$root"
+send "$tmp/private" "$private"
+ssh "$host" "chmod 700 '$private/data'"
+
+# Let's Encrypt challenges, config.php and the database stay.
+prune "$tmp/public" "$root" "! -path './private/*' ! -path './.well-known/*'"
+prune "$tmp/private" "$private" "! -path ./config.php ! -path './data/*'"
 
 echo "deployed $(git rev-parse --short "$ref") to $host:$root"
 

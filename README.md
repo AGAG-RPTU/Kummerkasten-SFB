@@ -41,7 +41,7 @@ public/     webroot: built pages, js/, css/, img/, vendored libsodium, keys.json
 private/    app.php, schema.sql, config.example.php; on the server also config.php and data/
 tests/      node --test: unit tests, API tests against php -S, keys.json checks
 tools/      build-pages.js, deploy.sh, verify.sh, local.py, vendor.sh, dev-env.js, dev-router.php,
-            hash-password.php
+            dev-sendmail.sh, hash-password.php
 ```
 
 ## Development
@@ -52,8 +52,8 @@ Requires Node ≥ 20 and PHP ≥ 8.1 with `sodium` and `pdo_sqlite`;
 ```sh
 npm test                      # ~15 s
 node tools/dev-env.js         # dev config, access password "dev", two dev trusted persons
-KK_CONFIG=$PWD/private/data/dev/config.php \
-  php -d "sendmail_path=cat >> $PWD/private/data/dev/mail.log" \
+KK_CONFIG=$PWD/private/data/dev/config.php KK_MAIL_LOG=$PWD/private/data/dev/mail.log \
+  php -d sendmail_path=$PWD/tools/dev-sendmail.sh \
   -S localhost:8765 -t public tools/dev-router.php
 ```
 
@@ -69,35 +69,41 @@ committed, and `npm test` fails if they are stale.
 
 ## Deployment
 
-Host checklist (netcup, the current host, meets all of these; on `gap-www`
-`mail()` did not deliver without SMTP credentials):
+Host checklist (netcup, the current host, and the RPTU web hosting meet all
+of these):
 
 - PHP ≥ 8.1 with `sodium` and `pdo_sqlite` (`php -m`), plus `curl` if
   `ntfy_url` is used.
 - No database server: the data is one SQLite file in `private/data/`, which
   PHP reads itself. No cron, Node or Composer on the host either.
 - Apache 2.4 with HTTPS and `.htaccess` support for `mod_headers` and
-  `mod_rewrite`.
-- `mail()` delivers (`sendmail_path` set, relay configured). Otherwise set
-  `ntfy_url` in the config for push notifications instead.
-- `private/` writable by PHP. `tools/deploy.sh` puts it inside the webroot,
-  where `open_basedir` usually confines PHP; its `.htaccess` denies web
-  access. Check with `curl -I <site>/private/app.php`, which must give 403.
+  `mod_rewrite`. A proxy that ends TLS in front of it must send
+  `X-Forwarded-Proto`, or the redirect to HTTPS loops.
+- `mail()` delivers (`sendmail_path` set, relay configured), with `mail_from`
+  as sender: an address that exists and that the host may send as. Otherwise
+  set `ntfy_url` in the config for push notifications instead.
+- `private/` writable by PHP. Where PHP may read outside the webroot,
+  `tools/deploy.sh --beside` puts it next to the webroot. Otherwise it goes
+  inside, where `open_basedir` usually confines PHP and its `.htaccess`
+  denies web access; check with `curl -I <site>/private/app.php`, which must
+  give 403.
 - Access logs: ask the host to disable or anonymise IP logging for this site,
   switch off web statistics built from them, and state the log retention in
   `pages/privacy.html`.
 
 Steps:
 
-1. `tools/deploy.sh <ssh-host> <webroot>` copies the committed `HEAD`:
-   `public/` to the webroot, `private/` to `<webroot>/private`, and writes
+1. `tools/deploy.sh [--beside] <ssh-host> <webroot>` copies the committed
+   `HEAD`: `public/` to the webroot, `private/` to `<webroot>/private` or,
+   with `--beside`, to `<webroot>/../private`, and writes
    `version.txt` with the commit hash, which the footer links to on GitHub.
    It removes files git no longer has and leaves `config.php` and the
    database alone. Deploy only commits pushed to GitHub, so that others can
    verify them.
 2. On the host, copy `private/config.example.php` to `private/config.php` and
    set `pow_secret`, `site_url` and `mail_from`, plus `password_hash` if the
-   SFB access password should be required. Settings left out use the
+   SFB access password should be required. After `--beside`, `keys_file`
+   points into the webroot. Settings left out use the
    defaults in `DEFAULT_CONFIG` in `app.php`.
 3. Each trusted person opens `/setup` on the deployed site, on their own
    device, and sends the displayed JSON entry to the maintainer, who adds it
